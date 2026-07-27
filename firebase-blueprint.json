@@ -112,6 +112,47 @@
         "user": { "type": "string" }
       },
       "required": ["timestamp", "level", "category", "message"]
+    },
+    "systemConfig": {
+      "title": "System Configuration",
+      "description": "Secure Master Administrator configuration and authorized account validation",
+      "type": "object",
+      "properties": {
+        "masterAdminEmail": { "type": "string" },
+        "role": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["masterAdminEmail"]
+    }
+  },
+  "firestore": {
+    "/systemConfig/{configId}": {
+      "schema": "systemConfig",
+      "description": "Secure configuration document for authorized admin validation"
+    },
+    "/users/{userId}": {
+      "schema": "users",
+      "description": "User profile collection"
+    },
+    "/quizPacks/{packId}": {
+      "schema": "quizPacks",
+      "description": "Quiz packs metadata"
+    },
+    "/questions/{questionId}": {
+      "schema": "questions",
+      "description": "Quiz questions collection"
+    },
+    "/categories/{categoryId}": {
+      "schema": "categories",
+      "description": "Categories collection"
+    },
+    "/playerProgress/{progressId}": {
+      "schema": "playerProgress",
+      "description": "Player progress tracking"
+    },
+    "/systemLogs/{logId}": {
+      "schema": "systemLogs",
+      "description": "System logs"
     }
   }
 }

@@ -3,7 +3,7 @@ import { QuizCategory, QuizPack, Question, Achievement, UserProfile } from '../t
 export const DEFAULT_MASTER_ADMIN: UserProfile = {
   id: 'master-admin-001',
   username: 'MasterAdmin',
-  email: 'admin@100picsquiz.com',
+  email: 'garrydavies1963@gmail.com',
   role: 'admin',
   avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80',
   coins: 2500,

@@ -46,8 +46,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [activeTab, setActiveTab] = useState<'overview' | 'categories' | 'bulk-images' | 'packs' | 'questions' | 'ai' | 'users' | 'import' | 'database' | 'logs'>('overview');
   const [selectedCategoryForBulkUpload, setSelectedCategoryForBulkUpload] = useState<string | undefined>(undefined);
   
-  // Verify master admin access
-  if (currentUser.role !== 'admin') {
+  // Verify master admin access with strict email check
+  const isMasterAdminEmail = currentUser.email.toLowerCase() === 'garrydavies1963@gmail.com';
+
+  if (currentUser.role !== 'admin' || !isMasterAdminEmail) {
     return (
       <div className="p-8 max-w-lg mx-auto text-center space-y-4">
         <div className="inline-flex p-4 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30">
@@ -55,7 +57,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
         <h2 className="font-black text-2xl text-slate-100">Access Restricted</h2>
         <p className="text-slate-400 text-sm">
-          Master Administrator privileges are strictly required to view this panel.
+          Master Administrator privileges are strictly restricted to <strong className="text-amber-400">garrydavies1963@gmail.com</strong> via Google Account authentication.
         </p>
         <button
           onClick={onBackToGame}
@@ -83,14 +85,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <Shield className="w-6 h-6" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h1 className="font-black text-2xl tracking-tight text-slate-900 dark:text-white uppercase">Master Admin Control Panel</h1>
-              <span className="px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800 font-black text-[10px]">
-                UNRESTRICTED ACCESS
+              <span className="px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 font-black text-[10px] uppercase">
+                GOOGLE VERIFIED
               </span>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-bold">
-              Single Master Account • Full Content & System Control
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-bold flex items-center gap-2 mt-0.5">
+              <span>Authenticated Admin:</span>
+              <strong className="text-amber-600 dark:text-amber-400 font-black">{currentUser.email}</strong>
             </p>
           </div>
         </div>

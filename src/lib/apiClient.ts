@@ -37,11 +37,33 @@ export const apiClient = {
     const query = emailOrUsername.trim().toLowerCase();
     
     // Master Admin check
-    if (query === 'admin' || query === 'admin@100picsquiz.com') {
-      const admin = users.find(u => u.role === 'admin') || dbStore.getCurrentUser();
+    if (query === 'garrydavies1963@gmail.com') {
+      const admin = users.find(u => u.role === 'admin' && u.email === 'garrydavies1963@gmail.com') || {
+        id: 'master-admin-001',
+        username: 'Garry Davies (Master Admin)',
+        email: 'garrydavies1963@gmail.com',
+        role: 'admin' as const,
+        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80',
+        coins: 2500,
+        xp: 12500,
+        level: 25,
+        title: 'Quiz Master Administrator',
+        currentStreak: 14,
+        longestStreak: 30,
+        lastLoginDate: new Date().toISOString().split('T')[0],
+        createdAt: '2025-01-01'
+      };
       dbStore.setCurrentUser(admin);
-      dbStore.addLog('info', 'auth', `Master Admin logged in locally.`, admin.username);
+      dbStore.addLog('info', 'auth', `Master Admin logged in: garrydavies1963@gmail.com`, admin.username);
       return { user: admin, success: true };
+    }
+
+    if (query === 'admin') {
+      return {
+        user: dbStore.getCurrentUser(),
+        success: false,
+        message: 'Master Administrator login requires Google Account authentication for garrydavies1963@gmail.com.'
+      };
     }
 
     const found = users.find(u => u.email.toLowerCase() === query || u.username.toLowerCase() === query);

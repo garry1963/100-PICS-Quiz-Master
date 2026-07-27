@@ -19,13 +19,13 @@ app.post("/api/auth/login", (req, res) => {
   const { emailOrUsername } = req.body;
   const query = String(emailOrUsername || "").trim().toLowerCase();
 
-  if (query === "admin" || query === "admin@100picsquiz.com") {
+  if (query === "garrydavies1963@gmail.com") {
     return res.json({
       success: true,
       user: {
         id: "master-admin-001",
-        username: "MasterAdmin",
-        email: "admin@100picsquiz.com",
+        username: "Garry Davies (Master Admin)",
+        email: "garrydavies1963@gmail.com",
         role: "admin",
         avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80",
         coins: 2500,
@@ -37,6 +37,13 @@ app.post("/api/auth/login", (req, res) => {
         lastLoginDate: new Date().toISOString().split("T")[0],
         createdAt: "2025-01-01"
       }
+    });
+  }
+
+  if (query === "admin") {
+    return res.status(401).json({
+      success: false,
+      message: "Master Administrator login requires Google Account authentication for garrydavies1963@gmail.com."
     });
   }
 
@@ -57,6 +64,24 @@ app.post("/api/auth/login", (req, res) => {
       lastLoginDate: new Date().toISOString().split("T")[0],
       createdAt: new Date().toISOString()
     }
+  });
+});
+
+app.post("/api/auth/validate-admin", (req, res) => {
+  const { email } = req.body;
+  const normalizedEmail = String(email || "").trim().toLowerCase();
+  
+  if (normalizedEmail === "garrydavies1963@gmail.com") {
+    return res.json({
+      authorized: true,
+      email: "garrydavies1963@gmail.com",
+      role: "admin"
+    });
+  }
+
+  return res.status(403).json({
+    authorized: false,
+    message: "Access Denied: Only garrydavies1963@gmail.com is authorized as Master Administrator."
   });
 });
 

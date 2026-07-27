@@ -34,6 +34,11 @@ export const db = firebaseConfig.firestoreDatabaseId
 
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({
+  prompt: 'select_account'
+});
+
+export const MASTER_ADMIN_EMAIL = 'garrydavies1963@gmail.com';
 
 // Status indicator
 let firebaseConnected = false;
@@ -49,8 +54,89 @@ export const collections = {
   questions: () => collection(db, 'questions'),
   categories: () => collection(db, 'categories'),
   playerProgress: () => collection(db, 'playerProgress'),
-  systemLogs: () => collection(db, 'systemLogs')
+  systemLogs: () => collection(db, 'systemLogs'),
+  systemConfig: () => collection(db, 'systemConfig')
 };
+
+/**
+ * Fetch and securely validate the single authorized Master Admin email from Firebase Firestore.
+ */
+export async function getAuthorizedMasterAdminEmail(): Promise<string> {
+  try {
+    const configDocRef = doc(db, 'systemConfig', 'admin');
+    const snap = await getDoc(configDocRef);
+    if (snap.exists() && snap.data().masterAdminEmail) {
+      return String(snap.data().masterAdminEmail).trim().toLowerCase();
+    }
+    
+    // Seed default admin config securely in Firestore if not present
+    await setDoc(configDocRef, {
+      masterAdminEmail: MASTER_ADMIN_EMAIL,
+      role: 'admin',
+      updatedAt: new Date().toISOString()
+    }, { merge: true });
+
+    return MASTER_ADMIN_EMAIL.toLowerCase();
+  } catch (err) {
+    console.warn('Firestore getAuthorizedMasterAdminEmail fallback:', err);
+    return MASTER_ADMIN_EMAIL.toLowerCase();
+  }
+}
+
+/**
+ * Perform Master Admin Google Login and validate email against Firebase stored admin account.
+ */
+export async function loginMasterAdminWithGoogle(): Promise<{
+  success: boolean;
+  user?: UserProfile;
+  message?: string;
+}> {
+  try {
+    const authorizedEmail = await getAuthorizedMasterAdminEmail();
+    const result = await signInWithPopup(auth, googleProvider);
+    const googleUser = result.user;
+    const userEmail = (googleUser.email || '').trim().toLowerCase();
+
+    // STRICT VALIDATION: Ensure user email matches authorized master admin email in Firebase
+    if (userEmail !== authorizedEmail) {
+      await signOut(auth);
+      return {
+        success: false,
+        message: `Access Denied: The Google account "${googleUser.email || 'unknown'}" is NOT authorized as Master Administrator. Only ${authorizedEmail} is permitted.`
+      };
+    }
+
+    const adminProfile: UserProfile = {
+      id: googleUser.uid,
+      username: googleUser.displayName || 'Garry Davies (Master Admin)',
+      email: authorizedEmail,
+      role: 'admin',
+      avatar: googleUser.photoURL || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80',
+      coins: 2500,
+      xp: 12500,
+      level: 25,
+      title: 'Quiz Master Administrator',
+      currentStreak: 14,
+      longestStreak: 30,
+      lastLoginDate: new Date().toISOString().split('T')[0],
+      createdAt: new Date().toISOString()
+    };
+
+    // Store verified Master Admin in Firestore
+    await saveUserToFirestore(adminProfile);
+
+    return {
+      success: true,
+      user: adminProfile
+    };
+  } catch (err: any) {
+    console.error('Master Admin Google Auth error:', err);
+    return {
+      success: false,
+      message: err?.message || 'Google authentication failed. Please try again.'
+    };
+  }
+}
 
 // --- FIRESTORE SYNC & DATA API ---
 
