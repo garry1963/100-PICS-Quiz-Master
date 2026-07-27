@@ -1,0 +1,117 @@
+{
+  "entities": {
+    "users": {
+      "title": "User Profiles",
+      "description": "User accounts, coins, XP, levels, and roles",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "username": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "player"] },
+        "avatar": { "type": "string" },
+        "coins": { "type": "number" },
+        "xp": { "type": "number" },
+        "level": { "type": "number" },
+        "title": { "type": "string" },
+        "currentStreak": { "type": "number" },
+        "longestStreak": { "type": "number" },
+        "lastLoginDate": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "isBanned": { "type": "boolean" }
+      },
+      "required": ["id", "username", "role", "coins", "xp", "level"]
+    },
+    "quizPacks": {
+      "title": "Quiz Packs",
+      "description": "100 Pics quiz pack metadata",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string" },
+        "difficulty": { "type": "string" },
+        "thumbnail": { "type": "string" },
+        "banner": { "type": "string" },
+        "packColor": { "type": "string" },
+        "releaseDate": { "type": "string" },
+        "estimatedTime": { "type": "string" },
+        "totalQuestions": { "type": "number" },
+        "xpReward": { "type": "number" },
+        "coinReward": { "type": "number" },
+        "downloadSize": { "type": "string" },
+        "isFeatured": { "type": "boolean" },
+        "isNew": { "type": "boolean" },
+        "isPopular": { "type": "boolean" },
+        "tags": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["id", "title", "category", "difficulty", "totalQuestions"]
+    },
+    "questions": {
+      "title": "Quiz Questions",
+      "description": "Picture quiz questions with hints and facts",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "packId": { "type": "string" },
+        "order": { "type": "number" },
+        "image": { "type": "string" },
+        "correctAnswer": { "type": "string" },
+        "alternativeAcceptedAnswers": { "type": "array", "items": { "type": "string" } },
+        "difficulty": { "type": "string" },
+        "hint": { "type": "string" },
+        "triviaFact": { "type": "string" },
+        "category": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "imageCredit": { "type": "string" },
+        "isHidden": { "type": "boolean" }
+      },
+      "required": ["id", "packId", "correctAnswer", "hint", "triviaFact"]
+    },
+    "categories": {
+      "title": "Categories",
+      "description": "Categories for picture packs",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "slug": { "type": "string" },
+        "description": { "type": "string" },
+        "icon": { "type": "string" },
+        "color": { "type": "string" }
+      },
+      "required": ["id", "name", "slug"]
+    },
+    "playerProgress": {
+      "title": "Player Pack Progress",
+      "description": "Player completion records for quiz packs",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "packId": { "type": "string" },
+        "completedQuestions": { "type": "array", "items": { "type": "string" } },
+        "currentQuestionIndex": { "type": "number" },
+        "completionPercentage": { "type": "number" },
+        "starsEarned": { "type": "number" },
+        "completedAt": { "type": "string" }
+      },
+      "required": ["userId", "packId", "completedQuestions"]
+    },
+    "systemLogs": {
+      "title": "System Audit Logs",
+      "description": "Logs of admin actions and system events",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "level": { "type": "string" },
+        "category": { "type": "string" },
+        "message": { "type": "string" },
+        "user": { "type": "string" }
+      },
+      "required": ["timestamp", "level", "category", "message"]
+    }
+  }
+}

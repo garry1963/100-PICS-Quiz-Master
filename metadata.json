@@ -1,0 +1,6 @@
+{
+  "name": "100 PICS Quiz Master",
+  "description": "Tablet-first 100 PICS picture quiz game with offline gameplay, rich pack store, level progression, and comprehensive administrator control center.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
