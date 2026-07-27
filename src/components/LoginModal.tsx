@@ -4,7 +4,6 @@ import { apiClient } from '../lib/apiClient';
 import {
   loginMasterAdminWithGoogle,
   loginMasterAdminDirect,
-  MASTER_ADMIN_EMAIL,
   requestAccountCreationInFirestore,
   saveUserPinInFirestore,
   fetchUserFromFirestore,
@@ -45,7 +44,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   const [confirmPinInput, setConfirmPinInput] = useState('');
   
   // Admin Direct Login State
-  const [adminDirectEmail, setAdminDirectEmail] = useState(MASTER_ADMIN_EMAIL);
+  const [adminDirectEmail, setAdminDirectEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -56,6 +55,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     setSuccessMessage(null);
     setPinInput('');
     setConfirmPinInput('');
+    setAdminDirectEmail('');
     setPlayerStep('login');
     setTargetUser(null);
   };
@@ -657,7 +657,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                 </span>
               </div>
               <p className="text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
-                Only <strong className="text-slate-900 dark:text-white font-black">{MASTER_ADMIN_EMAIL}</strong> is authorized as Master Administrator.
+                Sign in with an authorized Master Administrator email address.
               </p>
             </div>
 
@@ -704,7 +704,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                     required
                     value={adminDirectEmail}
                     onChange={e => setAdminDirectEmail(e.target.value)}
-                    placeholder="garrydavies1963@gmail.com"
+                    placeholder="Enter authorized admin email..."
                     className="w-full px-4 py-3 rounded-2xl bg-slate-50 dark:bg-slate-950 border-2 border-amber-500/40 text-slate-900 dark:text-slate-100 text-sm font-black focus:outline-none focus:ring-2 focus:ring-amber-500"
                   />
                   <button
