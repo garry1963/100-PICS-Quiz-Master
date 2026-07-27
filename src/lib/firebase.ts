@@ -90,6 +90,7 @@ export async function loginMasterAdminWithGoogle(): Promise<{
   success: boolean;
   user?: UserProfile;
   message?: string;
+  isUnauthorizedDomain?: boolean;
 }> {
   try {
     const authorizedEmail = await getAuthorizedMasterAdminEmail();
@@ -131,9 +132,68 @@ export async function loginMasterAdminWithGoogle(): Promise<{
     };
   } catch (err: any) {
     console.error('Master Admin Google Auth error:', err);
+    
+    if (err?.code === 'auth/unauthorized-domain') {
+      const currentHost = typeof window !== 'undefined' ? window.location.hostname : 'this domain';
+      return {
+        success: false,
+        isUnauthorizedDomain: true,
+        message: `Firebase Auth domain restriction: "${currentHost}" is not listed in your Firebase project's Authorized Domains list. To use Google Popup Login, add "${currentHost}" in Firebase Console > Authentication > Settings > Authorized Domains. Alternatively, use Direct Authorized Email Verification below.`
+      };
+    }
+
     return {
       success: false,
       message: err?.message || 'Google authentication failed. Please try again.'
+    };
+  }
+}
+
+/**
+ * Direct verification of Master Admin Email against stored Firebase configuration.
+ */
+export async function loginMasterAdminDirect(inputEmail: string): Promise<{
+  success: boolean;
+  user?: UserProfile;
+  message?: string;
+}> {
+  try {
+    const normalizedInput = inputEmail.trim().toLowerCase();
+    const authorizedEmail = await getAuthorizedMasterAdminEmail();
+
+    if (normalizedInput !== authorizedEmail) {
+      return {
+        success: false,
+        message: `Access Denied: "${inputEmail}" is NOT authorized as Master Administrator. Only ${authorizedEmail} is permitted.`
+      };
+    }
+
+    const adminProfile: UserProfile = {
+      id: 'master-admin-001',
+      username: 'Garry Davies (Master Admin)',
+      email: authorizedEmail,
+      role: 'admin',
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80',
+      coins: 2500,
+      xp: 12500,
+      level: 25,
+      title: 'Quiz Master Administrator',
+      currentStreak: 14,
+      longestStreak: 30,
+      lastLoginDate: new Date().toISOString().split('T')[0],
+      createdAt: new Date().toISOString()
+    };
+
+    await saveUserToFirestore(adminProfile);
+
+    return {
+      success: true,
+      user: adminProfile
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      message: err?.message || 'Admin validation failed.'
     };
   }
 }

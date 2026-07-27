@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { X, Shield, User, Lock, ArrowRight, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { X, Shield, User, Lock, ArrowRight, AlertCircle, CheckCircle2, KeyRound, ExternalLink } from 'lucide-react';
 import { apiClient } from '../lib/apiClient';
-import { loginMasterAdminWithGoogle, MASTER_ADMIN_EMAIL } from '../lib/firebase';
+import { loginMasterAdminWithGoogle, loginMasterAdminDirect, MASTER_ADMIN_EMAIL } from '../lib/firebase';
 import { UserProfile } from '../types';
 import { soundFx } from '../lib/sound';
 
@@ -20,8 +20,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
   const [mode, setMode] = useState<'login' | 'admin'>('login');
   const [username, setUsername] = useState('');
+  const [adminDirectEmail, setAdminDirectEmail] = useState(MASTER_ADMIN_EMAIL);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showDirectInput, setShowDirectInput] = useState(false);
 
   const handleLoginPlayer = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,6 +55,28 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     } else {
       soundFx.playWrong();
       setErrorMessage(res.message || 'Google account validation failed.');
+      if (res.isUnauthorizedDomain) {
+        setShowDirectInput(true);
+      }
+    }
+  };
+
+  const handleLoginDirect = async (e: React.FormEvent) => {
+    e.preventDefault();
+    soundFx.playClick();
+    setLoading(true);
+    setErrorMessage(null);
+
+    const res = await loginMasterAdminDirect(adminDirectEmail);
+    setLoading(false);
+
+    if (res.success && res.user) {
+      soundFx.playCorrect();
+      onSuccessLogin(res.user);
+      onClose();
+    } else {
+      soundFx.playWrong();
+      setErrorMessage(res.message || 'Direct email validation failed.');
     }
   };
 
@@ -158,17 +182,18 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               <div className="font-black flex items-center justify-between text-amber-900 dark:text-amber-300 text-sm">
                 <span className="flex items-center gap-1.5">
                   <Shield className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                  Google Master Admin Login
+                  Master Admin Login
                 </span>
                 <span className="px-2 py-0.5 rounded-md bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-200 text-[10px] font-black uppercase">
                   RESTRICTED
                 </span>
               </div>
-              <p className="text-slate-600 dark:text-slate-300 font-medium">
+              <p className="text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
                 Only <strong className="text-slate-900 dark:text-white font-black">{MASTER_ADMIN_EMAIL}</strong> is authorized to sign in as Master Administrator. Firebase account validation is enforced.
               </p>
             </div>
 
+            {/* Google Sign In Button */}
             <button
               onClick={handleLoginMasterAdminGoogle}
               disabled={loading}
@@ -186,6 +211,45 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               )}
               <span>{loading ? 'VALIDATING GOOGLE ACCOUNT...' : 'SIGN IN WITH GOOGLE ADMIN'}</span>
             </button>
+
+            {/* Direct Authorized Email Login Toggle / Form */}
+            <div className="pt-2 border-t border-slate-200 dark:border-slate-800 text-left">
+              {!showDirectInput ? (
+                <button
+                  type="button"
+                  onClick={() => setShowDirectInput(true)}
+                  className="w-full py-2.5 text-xs text-amber-600 dark:text-amber-400 hover:underline font-bold text-center flex items-center justify-center gap-1.5"
+                >
+                  <KeyRound className="w-3.5 h-3.5" />
+                  <span>Verify Authorized Admin Account Email Directly</span>
+                </button>
+              ) : (
+                <form onSubmit={handleLoginDirect} className="space-y-3 pt-1 animate-in fade-in">
+                  <div className="flex items-center justify-between">
+                    <label className="font-black text-xs text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                      Authorized Admin Email
+                    </label>
+                    <span className="text-[10px] text-amber-600 font-extrabold uppercase">Firebase Store Validated</span>
+                  </div>
+                  <input
+                    type="email"
+                    required
+                    value={adminDirectEmail}
+                    onChange={e => setAdminDirectEmail(e.target.value)}
+                    placeholder="garrydavies1963@gmail.com"
+                    className="w-full px-4 py-3 rounded-2xl bg-slate-50 dark:bg-slate-950 border-2 border-amber-500/40 text-slate-900 dark:text-slate-100 text-sm font-black focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 dark:bg-amber-500 dark:hover:bg-amber-400 text-white dark:text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all"
+                  >
+                    <Shield className="w-4 h-4 text-amber-400 dark:text-slate-950" />
+                    <span>VERIFY & LOGIN ADMIN</span>
+                  </button>
+                </form>
+              )}
+            </div>
           </div>
         )}
 
