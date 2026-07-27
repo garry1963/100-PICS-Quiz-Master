@@ -14,6 +14,7 @@ export const DEFAULT_MASTER_ADMIN: UserProfile = {
   longestStreak: 30,
   lastLoginDate: new Date().toISOString().split('T')[0],
   createdAt: '2025-01-01',
+  approvalStatus: 'approved'
 };
 
 export const DEFAULT_PLAYER: UserProfile = {
@@ -29,7 +30,9 @@ export const DEFAULT_PLAYER: UserProfile = {
   currentStreak: 3,
   longestStreak: 5,
   lastLoginDate: new Date().toISOString().split('T')[0],
-  createdAt: '2026-06-15',
+  createdAt: '2025-01-01',
+  approvalStatus: 'approved',
+  pin: '1234'
 };
 
 export const INITIAL_CATEGORIES: QuizCategory[] = [

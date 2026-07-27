@@ -16,12 +16,14 @@ import {
   Download,
   Upload,
   Check,
-  AlertTriangle
+  AlertTriangle,
+  LogOut
 } from 'lucide-react';
 import { UserProfile, QuizCategory, QuizPack, Question, SystemLog } from '../../types';
 import { soundFx } from '../../lib/sound';
 import { dbStore } from '../../lib/storage';
 import { apiClient } from '../../lib/apiClient';
+import { signOutAdmin } from '../../lib/firebase';
 
 // Sub-views
 import { UserManagement } from './UserManagement';
@@ -37,14 +39,27 @@ import { BulkImageUploader } from './BulkImageUploader';
 interface AdminDashboardProps {
   currentUser: UserProfile;
   onBackToGame: () => void;
+  onAdminSignOut?: () => void;
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   currentUser,
   onBackToGame,
+  onAdminSignOut
 }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'categories' | 'bulk-images' | 'packs' | 'questions' | 'ai' | 'users' | 'import' | 'database' | 'logs'>('overview');
   const [selectedCategoryForBulkUpload, setSelectedCategoryForBulkUpload] = useState<string | undefined>(undefined);
+
+  const handleAdminSignOut = async () => {
+    soundFx.playClick();
+    await signOutAdmin();
+    dbStore.addLog('info', 'auth', 'Master Admin signed out from Admin Dashboard.');
+    if (onAdminSignOut) {
+      onAdminSignOut();
+    } else {
+      onBackToGame();
+    }
+  };
   
   // Verify master admin access with strict email check
   const isMasterAdminEmail = currentUser.email.toLowerCase() === 'garrydavies1963@gmail.com';
@@ -98,17 +113,28 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
         </div>
 
-        <button
-          id="admin-exit-btn"
-          onClick={() => {
-            soundFx.playClick();
-            onBackToGame();
-          }}
-          className="flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-extrabold text-sm transition-all"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Exit to Game</span>
-        </button>
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+          <button
+            id="admin-signout-btn"
+            onClick={handleAdminSignOut}
+            className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white font-extrabold text-xs uppercase tracking-wider transition-all shadow-sm"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Sign Out Admin</span>
+          </button>
+
+          <button
+            id="admin-exit-btn"
+            onClick={() => {
+              soundFx.playClick();
+              onBackToGame();
+            }}
+            className="flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-extrabold text-sm transition-all"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Exit to Game</span>
+          </button>
+        </div>
       </div>
 
       {/* Admin Navigation Tabs */}

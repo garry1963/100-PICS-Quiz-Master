@@ -18,9 +18,27 @@
         "longestStreak": { "type": "number" },
         "lastLoginDate": { "type": "string" },
         "createdAt": { "type": "string" },
-        "isBanned": { "type": "boolean" }
+        "isBanned": { "type": "boolean" },
+        "approvalStatus": { "type": "string" },
+        "pin": { "type": "string" },
+        "approvedAt": { "type": "string" }
       },
       "required": ["id", "username", "role", "coins", "xp", "level"]
+    },
+    "approvedUsers": {
+      "title": "Approved Users List",
+      "description": "Admin-approved user records with 4-digit PIN status and approval metadata",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "username": { "type": "string" },
+        "email": { "type": "string" },
+        "approvalStatus": { "type": "string" },
+        "pin": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "approvedAt": { "type": "string" }
+      },
+      "required": ["id", "username", "approvalStatus"]
     },
     "quizPacks": {
       "title": "Quiz Packs",
@@ -133,6 +151,10 @@
     "/users/{userId}": {
       "schema": "users",
       "description": "User profile collection"
+    },
+    "/approvedUsers/{userId}": {
+      "schema": "approvedUsers",
+      "description": "List of admin approved users"
     },
     "/quizPacks/{packId}": {
       "schema": "quizPacks",

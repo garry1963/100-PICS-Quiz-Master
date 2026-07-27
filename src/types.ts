@@ -1,4 +1,5 @@
 export type UserRole = 'admin' | 'player';
+export type AccountStatus = 'pending' | 'approved' | 'rejected';
 
 export type DifficultyLevel = 'Easy' | 'Medium' | 'Hard' | 'Expert' | 'Master';
 
@@ -17,6 +18,10 @@ export interface UserProfile {
   lastLoginDate: string; // YYYY-MM-DD
   createdAt: string;
   isBanned?: boolean;
+  approvalStatus?: AccountStatus;
+  pin?: string; // 4-digit PIN set on first login after approval
+  approvedAt?: string;
+  approvedBy?: string;
 }
 
 export interface QuizCategory {

@@ -50,6 +50,7 @@ export function isFirebaseConfigured(): boolean {
 // Collections reference helpers
 export const collections = {
   users: () => collection(db, 'users'),
+  approvedUsers: () => collection(db, 'approvedUsers'),
   quizPacks: () => collection(db, 'quizPacks'),
   questions: () => collection(db, 'questions'),
   categories: () => collection(db, 'categories'),
@@ -299,6 +300,9 @@ export async function deleteQuestionFromFirestore(questionId: string): Promise<v
 export async function saveUserToFirestore(user: UserProfile): Promise<void> {
   try {
     await setDoc(doc(db, 'users', user.id), user, { merge: true });
+    if (user.approvalStatus === 'approved') {
+      await setDoc(doc(db, 'approvedUsers', user.id), user, { merge: true });
+    }
   } catch (err) {
     console.warn('Firestore saveUser error:', err);
   }
@@ -316,6 +320,117 @@ export async function fetchUserFromFirestore(userId: string): Promise<UserProfil
   } catch (err) {
     console.warn('Firestore fetchUser error:', err);
     return null;
+  }
+}
+
+/** Fetch all users from Firestore */
+export async function fetchAllUsersFromFirestore(): Promise<UserProfile[]> {
+  try {
+    const snap = await getDocs(collections.users());
+    const items: UserProfile[] = [];
+    snap.forEach((d) => items.push(d.data() as UserProfile));
+    return items;
+  } catch (err) {
+    console.warn('Firestore fetchAllUsers error:', err);
+    return [];
+  }
+}
+
+/** Fetch list of admin-approved users from Firestore */
+export async function fetchApprovedUsersFromFirestore(): Promise<UserProfile[]> {
+  try {
+    const snap = await getDocs(collections.approvedUsers());
+    const items: UserProfile[] = [];
+    snap.forEach((d) => {
+      const u = d.data() as UserProfile;
+      if (u.approvalStatus === 'approved' || !u.approvalStatus) {
+        items.push(u);
+      }
+    });
+    return items;
+  } catch (err) {
+    console.warn('Firestore fetchApprovedUsers error:', err);
+    return [];
+  }
+}
+
+/** Create a new account request with pending approval status in Firestore */
+export async function requestAccountCreationInFirestore(
+  username: string,
+  email: string
+): Promise<UserProfile> {
+  const newUser: UserProfile = {
+    id: `user-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    username: username.trim(),
+    email: email.trim().toLowerCase(),
+    role: 'player',
+    avatar: `https://images.unsplash.com/photo-${1535713875002 + (Math.floor(Math.random() * 10))}?auto=format&fit=crop&w=250&q=80`,
+    coins: 500,
+    xp: 0,
+    level: 1,
+    title: 'Quiz Novice',
+    currentStreak: 1,
+    longestStreak: 1,
+    lastLoginDate: new Date().toISOString().split('T')[0],
+    createdAt: new Date().toISOString(),
+    approvalStatus: 'pending',
+    pin: ''
+  };
+
+  await setDoc(doc(db, 'users', newUser.id), newUser, { merge: true });
+  await setDoc(doc(db, 'approvedUsers', newUser.id), newUser, { merge: true });
+
+  return newUser;
+}
+
+/** Master Admin approval of a pending user account */
+export async function approveUserInFirestore(userId: string, adminEmail: string): Promise<void> {
+  const updateData = {
+    approvalStatus: 'approved' as const,
+    approvedAt: new Date().toISOString(),
+    approvedBy: adminEmail
+  };
+
+  try {
+    await setDoc(doc(db, 'users', userId), updateData, { merge: true });
+    await setDoc(doc(db, 'approvedUsers', userId), updateData, { merge: true });
+  } catch (err) {
+    console.warn('Firestore approveUser error:', err);
+  }
+}
+
+/** Master Admin rejection of a user account request */
+export async function rejectUserInFirestore(userId: string, adminEmail: string): Promise<void> {
+  const updateData = {
+    approvalStatus: 'rejected' as const,
+    approvedAt: new Date().toISOString(),
+    approvedBy: adminEmail
+  };
+
+  try {
+    await setDoc(doc(db, 'users', userId), updateData, { merge: true });
+    await setDoc(doc(db, 'approvedUsers', userId), updateData, { merge: true });
+  } catch (err) {
+    console.warn('Firestore rejectUser error:', err);
+  }
+}
+
+/** Save 4-digit PIN for an approved user */
+export async function saveUserPinInFirestore(userId: string, pin: string): Promise<void> {
+  try {
+    await setDoc(doc(db, 'users', userId), { pin }, { merge: true });
+    await setDoc(doc(db, 'approvedUsers', userId), { pin }, { merge: true });
+  } catch (err) {
+    console.warn('Firestore saveUserPin error:', err);
+  }
+}
+
+/** Admin Sign Out function */
+export async function signOutAdmin(): Promise<void> {
+  try {
+    await signOut(auth);
+  } catch (err) {
+    console.warn('Sign out error:', err);
   }
 }
 

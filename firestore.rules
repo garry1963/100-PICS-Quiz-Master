@@ -31,8 +31,13 @@ service cloud.firestore {
       allow write: if isMasterAdmin() || request.auth != null;
     }
 
-    // User profiles
+    // User profiles & Approved Users
     match /users/{userId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /approvedUsers/{userId} {
       allow read: if true;
       allow write: if true;
     }

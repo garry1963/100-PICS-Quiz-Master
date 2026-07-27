@@ -184,6 +184,28 @@ export function App() {
               refreshAllData();
               setActiveTab('home');
             }}
+            onAdminSignOut={() => {
+              const defaultPlayer: UserProfile = dbStore.getAllUsers().find(u => u.role !== 'admin') || {
+                id: 'player-1',
+                username: 'PlayerOne',
+                email: 'player@example.com',
+                role: 'player',
+                avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
+                coins: 100,
+                xp: 150,
+                level: 2,
+                title: 'Puzzle Rookie',
+                currentStreak: 1,
+                longestStreak: 3,
+                lastLoginDate: new Date().toISOString().split('T')[0],
+                createdAt: new Date().toISOString(),
+                approvalStatus: 'approved'
+              };
+              setUser(defaultPlayer);
+              dbStore.saveUser(defaultPlayer);
+              setActiveTab('home');
+              setIsLoginOpen(true);
+            }}
           />
         )}
 
@@ -231,6 +253,27 @@ export function App() {
       <LoginModal
         isOpen={isLoginOpen}
         onClose={() => setIsLoginOpen(false)}
+        onAdminSignOut={() => {
+          const defaultPlayer: UserProfile = dbStore.getAllUsers().find(u => u.role !== 'admin') || {
+            id: 'player-1',
+            username: 'PlayerOne',
+            email: 'player@example.com',
+            role: 'player',
+            avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
+            coins: 100,
+            xp: 150,
+            level: 2,
+            title: 'Puzzle Rookie',
+            currentStreak: 1,
+            longestStreak: 3,
+            lastLoginDate: new Date().toISOString().split('T')[0],
+            createdAt: new Date().toISOString(),
+            approvalStatus: 'approved'
+          };
+          setUser(defaultPlayer);
+          dbStore.saveUser(defaultPlayer);
+          setActiveTab('home');
+        }}
         onSuccessLogin={(loggedInUser) => {
           setUser(loggedInUser);
           dbStore.saveUser(loggedInUser);
