@@ -33,7 +33,8 @@ import {
   seedFirestoreIfEmpty,
   fetchPacksFromFirestore,
   fetchQuestionsFromFirestore,
-  fetchCategoriesFromFirestore
+  fetchCategoriesFromFirestore,
+  purgeSampleDataFromFirestore
 } from './firebase';
 
 const KEYS = {
@@ -75,6 +76,39 @@ class LocalStorageEngine {
     }
   }
 
+  public purgeSampleData() {
+    const sampleCategoryIds = ['cat-logos', 'cat-flags', 'cat-movies', 'cat-animals', 'cat-landmarks', 'cat-games', 'cat-food', 'cat-music'];
+    const samplePackIds = ['pack-famous-logos', 'pack-world-flags', 'pack-movie-icons', 'pack-wild-animals', 'pack-world-landmarks', 'pack-retro-games', 'pack-food-delights', 'pack-music-icons'];
+
+    const cleanCategories = this.getCategories().filter(c => !sampleCategoryIds.includes(c.id));
+    this.setItem(KEYS.CATEGORIES, cleanCategories);
+
+    const cleanPacks = this.getPacks().filter(p => !samplePackIds.includes(p.id));
+    this.setItem(KEYS.PACKS, cleanPacks);
+
+    const cleanQuestions = this.getQuestions().filter(q => 
+      !samplePackIds.includes(q.packId) && 
+      !q.id.startsWith('q-logo-') && !q.id.startsWith('q-flag-') &&
+      !q.id.startsWith('q-movie-') && !q.id.startsWith('q-animal-') &&
+      !q.id.startsWith('q-landmark-') && !q.id.startsWith('q-game-') &&
+      !q.id.startsWith('q-food-') && !q.id.startsWith('q-music-')
+    );
+    this.setItem(KEYS.QUESTIONS, cleanQuestions);
+
+    const cleanUsers = this.getAllUsers().filter(u => u.id !== 'player-guest-101' && u.id !== 'player-1');
+    if (cleanUsers.length === 0) {
+      cleanUsers.push(DEFAULT_MASTER_ADMIN);
+    }
+    this.setItem(KEYS.USERS, cleanUsers);
+
+    const curr = this.getCurrentUser();
+    if (curr.id === 'player-guest-101' || curr.id === 'player-1') {
+      this.setItem(KEYS.CURRENT_USER, DEFAULT_MASTER_ADMIN);
+    }
+
+    purgeSampleDataFromFirestore().catch(() => {});
+  }
+
   public ensureInitialized() {
     if (!localStorage.getItem(KEYS.CATEGORIES)) {
       this.setItem(KEYS.CATEGORIES, INITIAL_CATEGORIES);
@@ -89,12 +123,14 @@ class LocalStorageEngine {
       this.setItem(KEYS.ACHIEVEMENTS, INITIAL_ACHIEVEMENTS);
     }
     if (!localStorage.getItem(KEYS.USERS)) {
-      this.setItem(KEYS.USERS, [DEFAULT_MASTER_ADMIN, DEFAULT_PLAYER]);
+      this.setItem(KEYS.USERS, [DEFAULT_MASTER_ADMIN]);
     }
     if (!localStorage.getItem(KEYS.CURRENT_USER)) {
-      // Default to guest player account
-      this.setItem(KEYS.CURRENT_USER, DEFAULT_PLAYER);
+      this.setItem(KEYS.CURRENT_USER, DEFAULT_MASTER_ADMIN);
     }
+
+    // Always strip lingering sample data
+    this.purgeSampleData();
 
     // Seed & Sync with Firebase Firestore in the background
     seedFirestoreIfEmpty(
@@ -109,11 +145,14 @@ class LocalStorageEngine {
         fetchQuestionsFromFirestore(),
         fetchCategoriesFromFirestore()
       ]).then(([remotePacks, remoteQuestions, remoteCategories]) => {
-        // MERGE CATEGORIES: Keep remote and local, sync local-only to Firestore
+        // MERGE CATEGORIES: Keep remote and local (excluding sample IDs)
+        const sampleCategoryIds = ['cat-logos', 'cat-flags', 'cat-movies', 'cat-animals', 'cat-landmarks', 'cat-games', 'cat-food', 'cat-music'];
+        const samplePackIds = ['pack-famous-logos', 'pack-world-flags', 'pack-movie-icons', 'pack-wild-animals', 'pack-world-landmarks', 'pack-retro-games', 'pack-food-delights', 'pack-music-icons'];
+
         const localCats = this.getCategories();
         const catMap = new Map<string, QuizCategory>();
-        remoteCategories.forEach(c => catMap.set(c.id, c));
-        localCats.forEach(c => {
+        remoteCategories.filter(c => !sampleCategoryIds.includes(c.id)).forEach(c => catMap.set(c.id, c));
+        localCats.filter(c => !sampleCategoryIds.includes(c.id)).forEach(c => {
           if (!catMap.has(c.id)) {
             saveCategoryToFirestore(c).catch(() => {});
           }
@@ -122,11 +161,11 @@ class LocalStorageEngine {
         const mergedCategories = Array.from(catMap.values());
         this.setItem(KEYS.CATEGORIES, mergedCategories);
 
-        // MERGE PACKS: Keep remote and local, sync local-only to Firestore
+        // MERGE PACKS
         const localPacks = this.getPacks();
         const packMap = new Map<string, QuizPack>();
-        remotePacks.forEach(p => packMap.set(p.id, p));
-        localPacks.forEach(p => {
+        remotePacks.filter(p => !samplePackIds.includes(p.id)).forEach(p => packMap.set(p.id, p));
+        localPacks.filter(p => !samplePackIds.includes(p.id)).forEach(p => {
           if (!packMap.has(p.id)) {
             savePackToFirestore(p).catch(() => {});
           }
@@ -135,11 +174,11 @@ class LocalStorageEngine {
         const mergedPacks = Array.from(packMap.values());
         this.setItem(KEYS.PACKS, mergedPacks);
 
-        // MERGE QUESTIONS: Keep remote and local, sync local-only to Firestore
+        // MERGE QUESTIONS
         const localQuestions = this.getQuestions();
         const questionMap = new Map<string, Question>();
-        remoteQuestions.forEach(q => questionMap.set(q.id, q));
-        localQuestions.forEach(q => {
+        remoteQuestions.filter(q => !samplePackIds.includes(q.packId)).forEach(q => questionMap.set(q.id, q));
+        localQuestions.filter(q => !samplePackIds.includes(q.packId)).forEach(q => {
           if (!questionMap.has(q.id)) {
             saveQuestionToFirestore(q).catch(() => {});
           }
@@ -556,9 +595,10 @@ class LocalStorageEngine {
     this.setItem(KEYS.ACHIEVEMENTS, INITIAL_ACHIEVEMENTS);
     this.setItem(KEYS.PROGRESS, {});
     this.setItem(KEYS.ANSWERS, {});
-    this.setItem(KEYS.USERS, [DEFAULT_MASTER_ADMIN, DEFAULT_PLAYER]);
-    this.setItem(KEYS.CURRENT_USER, DEFAULT_PLAYER);
-    this.addLog('warn', 'database', 'Database reset to factory default seed state.');
+    this.setItem(KEYS.USERS, [DEFAULT_MASTER_ADMIN]);
+    this.setItem(KEYS.CURRENT_USER, DEFAULT_MASTER_ADMIN);
+    this.purgeSampleData();
+    this.addLog('warn', 'database', 'Database reset to factory default clean state.');
   }
 }
 

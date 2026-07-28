@@ -480,7 +480,7 @@ export async function seedFirestoreIfEmpty(
 ): Promise<void> {
   try {
     const existingPacks = await getDocs(collections.quizPacks());
-    if (existingPacks.empty) {
+    if (existingPacks.empty && packs.length > 0) {
       console.log('Seeding initial dataset to Firestore...');
       for (const cat of categories) {
         await saveCategoryToFirestore(cat);
@@ -500,3 +500,56 @@ export async function seedFirestoreIfEmpty(
     console.warn('Error during seedFirestoreIfEmpty:', err);
   }
 }
+
+/** Purge all sample data documents from Firestore */
+export async function purgeSampleDataFromFirestore(): Promise<void> {
+  const sampleCategoryIds = [
+    'cat-logos', 'cat-flags', 'cat-movies', 'cat-animals',
+    'cat-landmarks', 'cat-games', 'cat-food', 'cat-music'
+  ];
+  const samplePackIds = [
+    'pack-famous-logos', 'pack-world-flags', 'pack-movie-icons',
+    'pack-wild-animals', 'pack-world-landmarks', 'pack-retro-games',
+    'pack-food-delights', 'pack-music-icons'
+  ];
+
+  try {
+    for (const catId of sampleCategoryIds) {
+      await deleteDoc(doc(db, 'categories', catId));
+    }
+    for (const packId of samplePackIds) {
+      await deleteDoc(doc(db, 'quizPacks', packId));
+    }
+
+    const questionsSnap = await getDocs(collections.questions());
+    questionsSnap.forEach((d) => {
+      const id = d.id;
+      if (
+        id.startsWith('q-logo-') || id.startsWith('q-flag-') ||
+        id.startsWith('q-movie-') || id.startsWith('q-animal-') ||
+        id.startsWith('q-landmark-') || id.startsWith('q-game-') ||
+        id.startsWith('q-food-') || id.startsWith('q-music-')
+      ) {
+        deleteDoc(d.ref).catch(() => {});
+      }
+    });
+
+    await deleteDoc(doc(db, 'users', 'player-guest-101'));
+    await deleteDoc(doc(db, 'users', 'player-1'));
+    await deleteDoc(doc(db, 'approvedUsers', 'player-guest-101'));
+    await deleteDoc(doc(db, 'approvedUsers', 'player-1'));
+  } catch (err) {
+    console.warn('Purge sample data from Firestore error:', err);
+  }
+}
+
+/** Delete a user profile document from Firestore */
+export async function deleteUserFromFirestore(userId: string): Promise<void> {
+  try {
+    await deleteDoc(doc(db, 'users', userId));
+    await deleteDoc(doc(db, 'approvedUsers', userId));
+  } catch (err) {
+    console.warn('Firestore deleteUser error:', err);
+  }
+}
+

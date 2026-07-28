@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Database, RotateCcw, Upload, CheckCircle2, AlertTriangle, HardDrive } from 'lucide-react';
 import { dbStore } from '../../lib/storage';
 import { soundFx } from '../../lib/sound';
+import { FirestoreStressTester } from './FirestoreStressTester';
 
 export const DatabaseMaintenance: React.FC = () => {
   const handleRestoreFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -26,10 +27,10 @@ export const DatabaseMaintenance: React.FC = () => {
 
   const handleResetToDefault = () => {
     soundFx.playClick();
-    if (confirm('CRITICAL: Are you sure you want to reset the database to factory default seed data? All custom progress and edits will be reset.')) {
+    if (confirm('CRITICAL: Are you sure you want to reset the database to factory default clean state? All custom progress and edits will be reset.')) {
       dbStore.resetDatabaseToDefault();
       soundFx.playCorrect();
-      alert('Database reset to factory default state.');
+      alert('Database reset to factory default clean state.');
       window.location.reload();
     }
   };
@@ -37,9 +38,12 @@ export const DatabaseMaintenance: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="font-bold text-xl text-slate-100">Database Maintenance & Recovery</h3>
-        <p className="text-xs text-slate-400">Master Admin database backup, restore, and factory reset tools.</p>
+        <h3 className="font-bold text-xl text-slate-100">Database Maintenance & Stress Diagnostic</h3>
+        <p className="text-xs text-slate-400">Master Admin database backup, restore, factory reset, and Firestore stress diagnostics.</p>
       </div>
+
+      {/* Firestore Stress Tester Component */}
+      <FirestoreStressTester />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Restore from File */}
