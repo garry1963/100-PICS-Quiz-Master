@@ -23,36 +23,9 @@ import { HiddenImageScreen } from './components/HiddenImageScreen';
 import { LeaderboardScreen } from './components/LeaderboardScreen';
 
 export function App() {
-  const [user, setUser] = useState<UserProfile>(() => dbStore.getCurrentUser());
-  const [settings, setSettings] = useState<AccessibilitySettings>(() => dbStore.getAccessibilitySettings());
-  const [packs, setPacks] = useState<QuizPack[]>(() => dbStore.getPacks());
-  const [categories, setCategories] = useState(() => dbStore.getCategories());
-  const [downloadedPackIds, setDownloadedPackIds] = useState<string[]>(() => dbStore.getDownloadedPackIds());
-
-  // Security & Authentication verification state
-  // Signed in with 4-digit PIN / Admin authorization per active browser session
-  const [isPinVerified, setIsPinVerified] = useState<boolean>(() => {
-    // When the app is closed or re-started, sessionStorage is automatically cleared.
-    // This enforces that users must sign in again upon app launch.
-    const activeSession = sessionStorage.getItem('active_session_auth');
-    return activeSession === 'true';
-  });
-  const [authNoticeMessage, setAuthNoticeMessage] = useState<string | null>(null);
-  const [pendingGameAction, setPendingGameAction] = useState<
-    | { type: 'play_pack'; packId: string }
-    | { type: 'navigate_tab'; tab: string }
-    | null
-  >(null);
-
-  // Sign Out Handler for Master Admin and Players
-  const handleSignOutAll = async () => {
-    sessionStorage.removeItem('active_session_auth');
-    try {
-      await signOutAdmin();
-    } catch (e) {
-      console.warn('Sign out error:', e);
-    }
-    const defaultPlayer: UserProfile = dbStore.getAllUsers().find(u => u.role !== 'admin') || {
+  // Helper to get default guest player profile
+  const getDefaultPlayer = (): UserProfile => {
+    return dbStore.getAllUsers().find(u => u.role !== 'admin' && u.id === 'player-1') || {
       id: 'player-1',
       username: 'PlayerOne',
       email: 'player@example.com',
@@ -68,6 +41,78 @@ export function App() {
       createdAt: new Date().toISOString(),
       approvalStatus: 'approved'
     };
+  };
+
+  // Security & Authentication verification state
+  // Signed in with 4-digit PIN / Admin authorization per active browser session
+  const [isPinVerified, setIsPinVerified] = useState<boolean>(() => {
+    // When the app is closed or re-started, sessionStorage is automatically cleared.
+    // This enforces that users must sign in again upon app launch.
+    const activeSession = sessionStorage.getItem('active_session_auth');
+    return activeSession === 'true';
+  });
+
+  const [user, setUser] = useState<UserProfile>(() => {
+    const activeSession = sessionStorage.getItem('active_session_auth');
+    if (activeSession === 'true') {
+      return dbStore.getCurrentUser();
+    } else {
+      // Auto sign-out on app launch / closed & restarted
+      const guestPlayer = dbStore.getAllUsers().find(u => u.role !== 'admin' && u.id === 'player-1') || {
+        id: 'player-1',
+        username: 'PlayerOne',
+        email: 'player@example.com',
+        role: 'player',
+        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
+        coins: 100,
+        xp: 150,
+        level: 2,
+        title: 'Puzzle Rookie',
+        currentStreak: 1,
+        longestStreak: 3,
+        lastLoginDate: new Date().toISOString().split('T')[0],
+        createdAt: new Date().toISOString(),
+        approvalStatus: 'approved'
+      };
+      dbStore.setCurrentUser(guestPlayer);
+      signOutAdmin().catch(() => {});
+      return guestPlayer;
+    }
+  });
+
+  const [settings, setSettings] = useState<AccessibilitySettings>(() => dbStore.getAccessibilitySettings());
+  const [packs, setPacks] = useState<QuizPack[]>(() => dbStore.getPacks());
+  const [categories, setCategories] = useState(() => dbStore.getCategories());
+  const [downloadedPackIds, setDownloadedPackIds] = useState<string[]>(() => dbStore.getDownloadedPackIds());
+
+  // Auto sign-out verification on app mount
+  useEffect(() => {
+    const activeSession = sessionStorage.getItem('active_session_auth');
+    if (activeSession !== 'true') {
+      setIsPinVerified(false);
+      const guestPlayer = getDefaultPlayer();
+      setUser(guestPlayer);
+      dbStore.setCurrentUser(guestPlayer);
+      signOutAdmin().catch(() => {});
+    }
+  }, []);
+
+  const [authNoticeMessage, setAuthNoticeMessage] = useState<string | null>(null);
+  const [pendingGameAction, setPendingGameAction] = useState<
+    | { type: 'play_pack'; packId: string }
+    | { type: 'navigate_tab'; tab: string }
+    | null
+  >(null);
+
+  // Sign Out Handler for Master Admin and Players
+  const handleSignOutAll = async () => {
+    sessionStorage.removeItem('active_session_auth');
+    try {
+      await signOutAdmin();
+    } catch (e) {
+      console.warn('Sign out error:', e);
+    }
+    const defaultPlayer = getDefaultPlayer();
     setUser(defaultPlayer);
     dbStore.saveUser(defaultPlayer);
     dbStore.setCurrentUser(defaultPlayer);
@@ -91,7 +136,7 @@ export function App() {
 
   // Authorization check helper for game & puzzle features
   const checkUserAuthorizedForGames = (action?: { type: 'play_pack'; packId: string } | { type: 'navigate_tab'; tab: string }): boolean => {
-    const cur = dbStore.getCurrentUser();
+    const cur = user;
 
     // 1. Account must be approved (or master admin)
     if (cur.role !== 'admin' && cur.approvalStatus !== 'approved') {
@@ -101,8 +146,8 @@ export function App() {
       return false;
     }
 
-    // 2. Must be signed in with PIN for active session (or master admin)
-    if (!isPinVerified && cur.role !== 'admin') {
+    // 2. Must be signed in with PIN for active session
+    if (!isPinVerified) {
       if (action) setPendingGameAction(action);
       setAuthNoticeMessage('You must have an approved account and be signed in with your 4-digit PIN number before gaining access to any app game and puzzle features.');
       setIsLoginOpen(true);
@@ -345,18 +390,39 @@ export function App() {
         )}
 
         {activeTab === 'admin' && (
-          <AdminDashboard
-            currentUser={user}
-            onBackToGame={() => {
-              refreshAllData();
-              setActiveTab('home');
-            }}
-            onAdminSignOut={handleSignOutAll}
-          />
+          !isPinVerified || user.role !== 'admin' ? (
+            <div className="p-12 text-center bg-slate-900/90 rounded-3xl border-2 border-rose-500/30 max-w-lg mx-auto space-y-4 my-12 text-white shadow-2xl">
+              <div className="w-16 h-16 bg-rose-600 text-white rounded-2xl flex items-center justify-center mx-auto shadow-lg">
+                <Lock className="w-8 h-8" />
+              </div>
+              <h3 className="text-2xl font-black">Master Admin Access Required</h3>
+              <p className="text-slate-300 text-xs font-medium leading-relaxed">
+                You must sign in with Master Administrator credentials to access the control panel.
+              </p>
+              <button
+                onClick={() => {
+                  setAuthNoticeMessage('Please sign in with Master Administrator credentials.');
+                  setIsLoginOpen(true);
+                }}
+                className="px-8 py-3.5 bg-rose-600 hover:bg-rose-500 text-white font-black text-xs rounded-2xl shadow-xl transition-all"
+              >
+                SIGN IN AS MASTER ADMIN
+              </button>
+            </div>
+          ) : (
+            <AdminDashboard
+              currentUser={user}
+              onBackToGame={() => {
+                refreshAllData();
+                setActiveTab('home');
+              }}
+              onAdminSignOut={handleSignOutAll}
+            />
+          )
         )}
 
         {activeTab === 'quiz' && activeQuizPack && (
-          !isPinVerified && user.role !== 'admin' ? (
+          !isPinVerified ? (
             <div className="p-12 text-center bg-slate-900/90 rounded-3xl border-2 border-amber-500/30 max-w-lg mx-auto space-y-4 my-12 text-white shadow-2xl">
               <div className="w-16 h-16 bg-amber-500 text-slate-950 rounded-2xl flex items-center justify-center mx-auto shadow-lg">
                 <Lock className="w-8 h-8" />

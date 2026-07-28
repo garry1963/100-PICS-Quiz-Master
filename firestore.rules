@@ -33,6 +33,15 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    // Health check & stress test diagnostic collections
+    match /_health_check/{docId} {
+      allow read, write: if true;
+    }
+
+    match /_stress_batch/{docId} {
+      allow read, write: if true;
+    }
+
     // System Logs
     match /systemLogs/{logId} {
       allow read, write: if true;

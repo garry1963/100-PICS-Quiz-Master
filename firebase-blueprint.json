@@ -175,6 +175,14 @@
     "/systemLogs/{logId}": {
       "schema": "systemLogs",
       "description": "System logs"
+    },
+    "/_health_check/{docId}": {
+      "schema": { "$ref": "#/entities/systemLogs" },
+      "description": "Ping and health check diagnostic collection"
+    },
+    "/_stress_batch/{docId}": {
+      "schema": { "$ref": "#/entities/systemLogs" },
+      "description": "Concurrent batch stress diagnostic collection"
     }
   }
 }
