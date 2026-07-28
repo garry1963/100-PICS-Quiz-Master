@@ -103,21 +103,50 @@ class LocalStorageEngine {
       this.getQuestions(),
       this.getAllUsers()
     ).then(() => {
-      // Background sync packs & questions from Firestore if available
+      // Background sync packs, questions & categories from Firestore
       Promise.all([
         fetchPacksFromFirestore(),
         fetchQuestionsFromFirestore(),
         fetchCategoriesFromFirestore()
       ]).then(([remotePacks, remoteQuestions, remoteCategories]) => {
-        if (remotePacks.length > 0) {
-          this.setItem(KEYS.PACKS, remotePacks);
-        }
-        if (remoteQuestions.length > 0) {
-          this.setItem(KEYS.QUESTIONS, remoteQuestions);
-        }
-        if (remoteCategories.length > 0) {
-          this.setItem(KEYS.CATEGORIES, remoteCategories);
-        }
+        // MERGE CATEGORIES: Keep remote and local, sync local-only to Firestore
+        const localCats = this.getCategories();
+        const catMap = new Map<string, QuizCategory>();
+        remoteCategories.forEach(c => catMap.set(c.id, c));
+        localCats.forEach(c => {
+          if (!catMap.has(c.id)) {
+            saveCategoryToFirestore(c).catch(() => {});
+          }
+          catMap.set(c.id, c);
+        });
+        const mergedCategories = Array.from(catMap.values());
+        this.setItem(KEYS.CATEGORIES, mergedCategories);
+
+        // MERGE PACKS: Keep remote and local, sync local-only to Firestore
+        const localPacks = this.getPacks();
+        const packMap = new Map<string, QuizPack>();
+        remotePacks.forEach(p => packMap.set(p.id, p));
+        localPacks.forEach(p => {
+          if (!packMap.has(p.id)) {
+            savePackToFirestore(p).catch(() => {});
+          }
+          packMap.set(p.id, p);
+        });
+        const mergedPacks = Array.from(packMap.values());
+        this.setItem(KEYS.PACKS, mergedPacks);
+
+        // MERGE QUESTIONS: Keep remote and local, sync local-only to Firestore
+        const localQuestions = this.getQuestions();
+        const questionMap = new Map<string, Question>();
+        remoteQuestions.forEach(q => questionMap.set(q.id, q));
+        localQuestions.forEach(q => {
+          if (!questionMap.has(q.id)) {
+            saveQuestionToFirestore(q).catch(() => {});
+          }
+          questionMap.set(q.id, q);
+        });
+        const mergedQuestions = Array.from(questionMap.values());
+        this.setItem(KEYS.QUESTIONS, mergedQuestions);
       }).catch(err => console.warn('Background Firestore pull failed:', err));
     });
   }
@@ -250,9 +279,58 @@ class LocalStorageEngine {
   }
 
   public deleteQuestion(questionId: string) {
-    const questions = this.getQuestions().filter(q => q.id !== questionId);
+    const allQs = this.getQuestions();
+    const targetQ = allQs.find(q => q.id === questionId);
+    const questions = allQs.filter(q => q.id !== questionId);
     this.setItem(KEYS.QUESTIONS, questions);
     deleteQuestionFromFirestore(questionId).catch(() => {});
+
+    if (targetQ) {
+      const packId = targetQ.packId;
+      const packQsCount = questions.filter(q => q.packId === packId).length;
+      const packs = this.getPacks();
+      const pack = packs.find(p => p.id === packId);
+      if (pack) {
+        pack.totalQuestions = packQsCount;
+        this.savePack(pack);
+      }
+    }
+  }
+
+  public deleteQuestionsBatch(questionIds: string[]) {
+    if (!questionIds || questionIds.length === 0) return;
+    const idsSet = new Set(questionIds);
+    const allQs = this.getQuestions();
+    const affectedPackIds = new Set(allQs.filter(q => idsSet.has(q.id)).map(q => q.packId));
+    const questions = allQs.filter(q => !idsSet.has(q.id));
+    this.setItem(KEYS.QUESTIONS, questions);
+    questionIds.forEach(id => deleteQuestionFromFirestore(id).catch(() => {}));
+
+    // Sync pack question counts
+    const packs = this.getPacks();
+    affectedPackIds.forEach(packId => {
+      const pack = packs.find(p => p.id === packId);
+      if (pack) {
+        pack.totalQuestions = questions.filter(q => q.packId === packId).length;
+        this.savePack(pack);
+      }
+    });
+  }
+
+  public clearQuestionImageAndInfo(questionId: string) {
+    const questions = this.getQuestions();
+    const idx = questions.findIndex(q => q.id === questionId);
+    if (idx >= 0) {
+      questions[idx] = {
+        ...questions[idx],
+        image: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=800&q=80',
+        hint: '',
+        triviaFact: '',
+        alternativeAcceptedAnswers: []
+      };
+      this.setItem(KEYS.QUESTIONS, questions);
+      saveQuestionToFirestore(questions[idx]).catch(() => {});
+    }
   }
 
   // --- PROGRESS ---

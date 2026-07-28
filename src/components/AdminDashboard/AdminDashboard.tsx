@@ -347,7 +347,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         {activeTab === 'bulk-images' && (
           <BulkImageUploader initialCategoryId={selectedCategoryForBulkUpload} />
         )}
-        {activeTab === 'packs' && <QuizPackEditor />}
+        {activeTab === 'packs' && (
+          <QuizPackEditor
+            onManageQuestions={(packId) => {
+              setActiveTab('questions');
+            }}
+          />
+        )}
         {activeTab === 'questions' && <QuestionEditor />}
         {activeTab === 'ai' && <AIGeneratorModal />}
         {activeTab === 'import' && <BulkImportExport />}

@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
-import { FolderPlus, Plus, Trash2, Edit3, Copy, Save, X, Sparkles, Check } from 'lucide-react';
+import { FolderPlus, Plus, Trash2, Edit3, Copy, Save, X, Sparkles, Check, Image as ImageIcon } from 'lucide-react';
 import { QuizPack, DifficultyLevel } from '../../types';
 import { dbStore } from '../../lib/storage';
 import { soundFx } from '../../lib/sound';
 
-export const QuizPackEditor: React.FC = () => {
+interface QuizPackEditorProps {
+  onManageQuestions?: (packId: string) => void;
+}
+
+export const QuizPackEditor: React.FC<QuizPackEditorProps> = ({ onManageQuestions }) => {
   const [packs, setPacks] = useState<QuizPack[]>(() => dbStore.getPacks());
   const [editingPack, setEditingPack] = useState<QuizPack | null>(null);
   const [isNew, setIsNew] = useState(false);
@@ -217,6 +221,15 @@ export const QuizPackEditor: React.FC = () => {
                 🪙 +{p.coinReward} | ⚡ +{p.xpReward} XP
               </div>
               <div className="flex items-center gap-1">
+                {onManageQuestions && (
+                  <button
+                    onClick={() => onManageQuestions(p.id)}
+                    className="p-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/40 text-amber-300 border border-amber-500/30"
+                    title="Manage & Remove Images / Questions for this Pack"
+                  >
+                    <ImageIcon className="w-3.5 h-3.5" />
+                  </button>
+                )}
                 <button
                   onClick={() => handleDuplicate(p)}
                   className="p-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-300"

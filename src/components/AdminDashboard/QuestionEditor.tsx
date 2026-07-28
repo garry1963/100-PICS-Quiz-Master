@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { HelpCircle, Plus, Trash2, Edit3, ArrowUp, ArrowDown, Save, X, Image as ImageIcon } from 'lucide-react';
-import { Question, QuizPack, DifficultyLevel } from '../../types';
+import { HelpCircle, Plus, Trash2, Edit3, Save, X, Image as ImageIcon, Search, CheckSquare, Square, AlertTriangle, RefreshCw, Eraser } from 'lucide-react';
+import { Question, QuizPack } from '../../types';
 import { dbStore } from '../../lib/storage';
 import { soundFx } from '../../lib/sound';
 
@@ -9,13 +9,41 @@ export const QuestionEditor: React.FC = () => {
   const [selectedPackId, setSelectedPackId] = useState<string>(packs[0]?.id || '');
   const [questions, setQuestions] = useState<Question[]>(() => dbStore.getQuestions());
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
+  const [searchFilter, setSearchFilter] = useState<string>('');
+  const [selectedQuestionIds, setSelectedQuestionIds] = useState<string[]>([]);
+  const [showConfirmModal, setShowConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {}
+  });
+
+  const selectedPack = packs.find(p => p.id === selectedPackId);
 
   const packQuestions = questions
     .filter(q => q.packId === selectedPackId)
     .sort((a, b) => a.order - b.order);
 
+  const filteredQuestions = packQuestions.filter(q => {
+    if (!searchFilter.trim()) return true;
+    const term = searchFilter.toLowerCase();
+    return (
+      q.correctAnswer.toLowerCase().includes(term) ||
+      (q.hint && q.hint.toLowerCase().includes(term)) ||
+      (q.triviaFact && q.triviaFact.toLowerCase().includes(term)) ||
+      (q.image && q.image.toLowerCase().includes(term)) ||
+      (q.alternativeAcceptedAnswers && q.alternativeAcceptedAnswers.some(alt => alt.toLowerCase().includes(term)))
+    );
+  });
+
   const reloadQuestions = () => {
     setQuestions(dbStore.getQuestions());
+    setSelectedQuestionIds([]);
   };
 
   const handleAddNewQuestion = () => {
@@ -46,36 +74,145 @@ export const QuestionEditor: React.FC = () => {
     reloadQuestions();
   };
 
-  const handleDelete = (questionId: string) => {
+  // Remove single image & question completely from pack
+  const handleRemoveImageAndInfo = (questionId: string, answerText: string) => {
     soundFx.playClick();
-    if (confirm('Delete this picture question?')) {
-      dbStore.deleteQuestion(questionId);
-      dbStore.addLog('warn', 'content', `Question deleted: ${questionId}`);
-      reloadQuestions();
+    setShowConfirmModal({
+      isOpen: true,
+      title: 'Remove Image & Question Information',
+      message: `Are you sure you want to remove the picture and associated question information for "${answerText}" from this quiz pack?`,
+      onConfirm: () => {
+        dbStore.deleteQuestion(questionId);
+        dbStore.addLog('warn', 'content', `Removed image & question info: ${questionId} (${answerText})`);
+        setShowConfirmModal(prev => ({ ...prev, isOpen: false }));
+        reloadQuestions();
+      }
+    });
+  };
+
+  // Clear image URL and reset info to defaults without deleting slot
+  const handleClearImageAndReset = (questionId: string) => {
+    soundFx.playClick();
+    dbStore.clearQuestionImageAndInfo(questionId);
+    dbStore.addLog('info', 'content', `Cleared image & reset info for question: ${questionId}`);
+    reloadQuestions();
+  };
+
+  // Batch remove selected images and question info
+  const handleRemoveSelected = () => {
+    if (selectedQuestionIds.length === 0) return;
+    soundFx.playClick();
+    setShowConfirmModal({
+      isOpen: true,
+      title: `Remove ${selectedQuestionIds.length} Selected Images & Questions`,
+      message: `Are you sure you want to permanently remove ${selectedQuestionIds.length} selected image(s) and their associated question information from this quiz pack?`,
+      onConfirm: () => {
+        dbStore.deleteQuestionsBatch(selectedQuestionIds);
+        dbStore.addLog('warn', 'content', `Batch removed ${selectedQuestionIds.length} images & questions from pack ${selectedPackId}`);
+        setShowConfirmModal(prev => ({ ...prev, isOpen: false }));
+        reloadQuestions();
+      }
+    });
+  };
+
+  // Remove ALL images & question info from the current pack
+  const handleRemoveAllFromPack = () => {
+    if (packQuestions.length === 0) return;
+    soundFx.playClick();
+    const packTitle = selectedPack?.title || 'Selected Pack';
+    setShowConfirmModal({
+      isOpen: true,
+      title: `Remove ALL Images & Information from "${packTitle}"`,
+      message: `WARNING: This will remove ALL ${packQuestions.length} picture questions and associated trivia information from "${packTitle}". This action cannot be undone.`,
+      onConfirm: () => {
+        const allIds = packQuestions.map(q => q.id);
+        dbStore.deleteQuestionsBatch(allIds);
+        dbStore.addLog('warn', 'content', `Wiped all ${allIds.length} images and questions from pack ${selectedPackId}`);
+        setShowConfirmModal(prev => ({ ...prev, isOpen: false }));
+        reloadQuestions();
+      }
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedQuestionIds.length === filteredQuestions.length) {
+      setSelectedQuestionIds([]);
+    } else {
+      setSelectedQuestionIds(filteredQuestions.map(q => q.id));
+    }
+  };
+
+  const toggleSelectQuestion = (id: string) => {
+    if (selectedQuestionIds.includes(id)) {
+      setSelectedQuestionIds(selectedQuestionIds.filter(i => i !== id));
+    } else {
+      setSelectedQuestionIds([...selectedQuestionIds, id]);
     }
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Confirmation Modal */}
+      {showConfirmModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+          <div className="bg-slate-900 border-2 border-rose-500/50 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl animate-in zoom-in-95">
+            <div className="flex items-center gap-3 text-rose-400">
+              <div className="p-3 bg-rose-500/20 rounded-2xl border border-rose-500/30">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <h4 className="font-black text-lg text-white">{showConfirmModal.title}</h4>
+            </div>
+            <p className="text-slate-300 text-xs leading-relaxed">{showConfirmModal.message}</p>
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                onClick={() => setShowConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={showConfirmModal.onConfirm}
+                className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs shadow-lg shadow-rose-600/30 flex items-center gap-1.5"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Confirm Removal</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Top Header Controls */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-6 bg-slate-900/90 rounded-3xl border border-slate-800">
         <div>
-          <h3 className="font-bold text-xl text-slate-100">Question & Picture Editor</h3>
-          <p className="text-xs text-slate-400">Add, edit, and reorder picture questions, accepted spellings, and trivia facts.</p>
+          <h3 className="font-black text-xl text-slate-100 flex items-center gap-2">
+            <ImageIcon className="w-5 h-5 text-amber-400" />
+            Quiz Pack Image & Question Manager
+          </h3>
+          <p className="text-xs text-slate-400 mt-1">
+            Select any quiz pack to edit, update, or permanently remove picture images and associated trivia information.
+          </p>
         </div>
 
-        {/* Pack Selector Dropdown */}
-        <div className="flex items-center gap-3">
-          <select
-            value={selectedPackId}
-            onChange={e => setSelectedPackId(e.target.value)}
-            className="px-4 py-2.5 rounded-2xl bg-slate-800 border border-slate-700 text-slate-100 font-bold text-xs"
-          >
-            {packs.map(p => (
-              <option key={p.id} value={p.id}>
-                {p.title} ({p.category})
-              </option>
-            ))}
-          </select>
+        {/* Pack Selector & Add Action */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 bg-slate-950 px-3 py-2 rounded-2xl border border-slate-800">
+            <span className="text-[11px] font-bold text-slate-400 uppercase">Select Pack:</span>
+            <select
+              value={selectedPackId}
+              onChange={e => {
+                setSelectedPackId(e.target.value);
+                setSelectedQuestionIds([]);
+              }}
+              className="bg-transparent text-amber-300 font-extrabold text-xs focus:outline-none"
+            >
+              {packs.map(p => (
+                <option key={p.id} value={p.id} className="bg-slate-900 text-white">
+                  {p.title} ({p.totalQuestions || 0} pics)
+                </option>
+              ))}
+            </select>
+          </div>
 
           <button
             onClick={handleAddNewQuestion}
@@ -87,7 +224,79 @@ export const QuestionEditor: React.FC = () => {
         </div>
       </div>
 
-      {/* Editing Question Modal */}
+      {/* Selected Pack Summary Banner */}
+      {selectedPack && (
+        <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <img src={selectedPack.thumbnail} alt={selectedPack.title} className="w-12 h-12 rounded-xl object-cover" />
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="font-black text-sm text-amber-300">{selectedPack.title}</h4>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-800 uppercase">
+                  {selectedPack.category}
+                </span>
+              </div>
+              <p className="text-xs text-slate-400">
+                Total Pictures in Pack: <strong className="text-white">{packQuestions.length}</strong>
+              </p>
+            </div>
+          </div>
+
+          {/* Action to Remove ALL images from Pack */}
+          {packQuestions.length > 0 && (
+            <button
+              onClick={handleRemoveAllFromPack}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-800 font-black text-xs transition-colors self-start sm:self-center"
+              title="Remove all pictures and associated trivia info from this pack"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+              <span>REMOVE ALL IMAGES FROM PACK</span>
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Search & Bulk Operations Toolbar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-slate-900 rounded-2xl border border-slate-800">
+        <div className="relative flex-1 max-w-md">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+          <input
+            type="text"
+            value={searchFilter}
+            onChange={e => setSearchFilter(e.target.value)}
+            placeholder="Search images by answer, hint, fact or URL..."
+            className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+          />
+        </div>
+
+        <div className="flex items-center gap-2">
+          {packQuestions.length > 0 && (
+            <button
+              onClick={toggleSelectAll}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold"
+            >
+              {selectedQuestionIds.length === filteredQuestions.length && filteredQuestions.length > 0 ? (
+                <CheckSquare className="w-4 h-4 text-indigo-400" />
+              ) : (
+                <Square className="w-4 h-4 text-slate-400" />
+              )}
+              <span>Select All</span>
+            </button>
+          )}
+
+          {selectedQuestionIds.length > 0 && (
+            <button
+              onClick={handleRemoveSelected}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black shadow-md shadow-rose-600/20"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>REMOVE SELECTED ({selectedQuestionIds.length})</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Question Form Modal */}
       {editingQuestion && (
         <div className="p-6 rounded-3xl bg-slate-800 border-2 border-indigo-500/50 shadow-2xl space-y-4">
           <div className="flex items-center justify-between border-b border-slate-700 pb-3">
@@ -126,12 +335,17 @@ export const QuestionEditor: React.FC = () => {
 
             <div className="md:col-span-2">
               <label className="font-bold text-slate-300 block mb-1">Picture Image URL</label>
-              <input
-                type="text"
-                value={editingQuestion.image}
-                onChange={e => setEditingQuestion({ ...editingQuestion, image: e.target.value })}
-                className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-200"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={editingQuestion.image}
+                  onChange={e => setEditingQuestion({ ...editingQuestion, image: e.target.value })}
+                  className="flex-1 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-200"
+                />
+                {editingQuestion.image && (
+                  <img src={editingQuestion.image} alt="Preview" className="w-10 h-10 rounded-lg object-cover border border-slate-700 shrink-0" />
+                )}
+              </div>
             </div>
 
             <div>
@@ -155,56 +369,113 @@ export const QuestionEditor: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-3 border-t border-slate-700">
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-700">
             <button
-              onClick={() => setEditingQuestion(null)}
-              className="px-4 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-xs"
+              onClick={() => {
+                if (editingQuestion.id) {
+                  handleRemoveImageAndInfo(editingQuestion.id, editingQuestion.correctAnswer);
+                  setEditingQuestion(null);
+                }
+              }}
+              className="px-4 py-2 rounded-xl bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800 font-bold text-xs flex items-center gap-1.5"
             >
-              Cancel
+              <Trash2 className="w-4 h-4 text-rose-400" />
+              <span>REMOVE IMAGE & INFO</span>
             </button>
-            <button
-              onClick={handleSave}
-              className="px-6 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs flex items-center gap-1.5"
-            >
-              <Save className="w-4 h-4" />
-              <span>SAVE QUESTION</span>
-            </button>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setEditingQuestion(null)}
+                className="px-4 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                className="px-6 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs flex items-center gap-1.5"
+              >
+                <Save className="w-4 h-4" />
+                <span>SAVE QUESTION</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Questions Table/List */}
+      {/* Questions List */}
       <div className="space-y-3">
-        {packQuestions.length === 0 ? (
-          <p className="text-slate-400 text-sm italic text-center py-8">No questions in this pack yet.</p>
+        {filteredQuestions.length === 0 ? (
+          <div className="p-12 rounded-3xl bg-slate-900/50 border border-dashed border-slate-800 text-center space-y-2">
+            <ImageIcon className="w-10 h-10 text-slate-600 mx-auto" />
+            <p className="text-slate-400 text-sm font-medium">
+              {searchFilter ? 'No picture questions match your search filter.' : 'No picture questions in this quiz pack yet.'}
+            </p>
+          </div>
         ) : (
-          packQuestions.map((q, idx) => (
-            <div key={q.id} className="p-3.5 rounded-2xl bg-slate-800/80 border border-slate-700 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <span className="w-7 h-7 rounded-lg bg-slate-900 border border-slate-700 text-indigo-400 font-extrabold text-xs flex items-center justify-center shrink-0">
+          filteredQuestions.map((q, idx) => (
+            <div
+              key={q.id}
+              className={`p-4 rounded-2xl bg-slate-800/80 border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+                selectedQuestionIds.includes(q.id)
+                  ? 'border-indigo-500 bg-indigo-950/20'
+                  : 'border-slate-700 hover:border-slate-600'
+              }`}
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <button
+                  onClick={() => toggleSelectQuestion(q.id)}
+                  className="p-1 text-slate-400 hover:text-white shrink-0"
+                >
+                  {selectedQuestionIds.includes(q.id) ? (
+                    <CheckSquare className="w-5 h-5 text-indigo-400" />
+                  ) : (
+                    <Square className="w-5 h-5 text-slate-500" />
+                  )}
+                </button>
+
+                <span className="w-7 h-7 rounded-lg bg-slate-900 border border-slate-700 text-amber-400 font-black text-xs flex items-center justify-center shrink-0">
                   #{idx + 1}
                 </span>
-                <img src={q.image} alt={q.correctAnswer} className="w-12 h-12 rounded-xl object-cover shrink-0" />
-                <div>
-                  <h5 className="font-black text-sm text-amber-300 tracking-wider">{q.correctAnswer}</h5>
-                  <p className="text-xs text-slate-400 italic truncate max-w-sm">{q.hint}</p>
+
+                <div className="relative group shrink-0">
+                  <img src={q.image} alt={q.correctAnswer} className="w-14 h-14 rounded-xl object-cover border border-slate-700 bg-slate-900" />
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <h5 className="font-black text-sm text-amber-300 tracking-wider truncate">{q.correctAnswer}</h5>
+                    {q.alternativeAcceptedAnswers && q.alternativeAcceptedAnswers.length > 0 && (
+                      <span className="text-[10px] text-slate-400 bg-slate-900 px-2 py-0.5 rounded-full border border-slate-700 hidden md:inline-block">
+                        +{q.alternativeAcceptedAnswers.length} alt spellings
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-400 italic truncate max-w-md mt-0.5">{q.hint || 'No clue hint defined.'}</p>
+                  {q.triviaFact && (
+                    <p className="text-[11px] text-slate-500 truncate max-w-md hidden sm:block">Fact: {q.triviaFact}</p>
+                  )}
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
                 <button
                   onClick={() => setEditingQuestion(q)}
-                  className="p-2 rounded-xl bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 text-xs font-bold"
-                  title="Edit Question"
+                  className="px-3 py-1.5 rounded-xl bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/30 text-xs font-bold flex items-center gap-1"
+                  title="Edit question parameters and image URL"
                 >
-                  <Edit3 className="w-4 h-4" />
+                  <Edit3 className="w-3.5 h-3.5" />
+                  <span>Edit</span>
                 </button>
+
                 <button
-                  onClick={() => handleDelete(q.id)}
-                  className="p-2 rounded-xl bg-rose-600/30 hover:bg-rose-600/50 text-rose-300 text-xs font-bold"
-                  title="Delete Question"
+                  onClick={() => handleRemoveImageAndInfo(q.id, q.correctAnswer)}
+                  className="px-3 py-1.5 rounded-xl bg-rose-600/20 hover:bg-rose-600/40 text-rose-300 border border-rose-500/30 text-xs font-bold flex items-center gap-1"
+                  title="Remove image and associated question info completely from pack"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                  <span className="hidden md:inline">Remove Image & Info</span>
+                  <span className="md:hidden">Remove</span>
                 </button>
               </div>
             </div>

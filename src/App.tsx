@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { dbStore } from './lib/storage';
 import { UserProfile, AccessibilitySettings, QuizPack, Question } from './types';
 import { soundFx } from './lib/sound';
+import { Lock, ShieldCheck, KeyRound } from 'lucide-react';
 
 // Components
 import { Navbar } from './components/Navbar';
@@ -27,6 +28,19 @@ export function App() {
   const [categories, setCategories] = useState(() => dbStore.getCategories());
   const [downloadedPackIds, setDownloadedPackIds] = useState<string[]>(() => dbStore.getDownloadedPackIds());
 
+  // Security & Authentication verification state
+  // Signed in with 4-digit PIN / Admin authorization
+  const [isPinVerified, setIsPinVerified] = useState<boolean>(() => {
+    const cur = dbStore.getCurrentUser();
+    return cur.role === 'admin';
+  });
+  const [authNoticeMessage, setAuthNoticeMessage] = useState<string | null>(null);
+  const [pendingGameAction, setPendingGameAction] = useState<
+    | { type: 'play_pack'; packId: string }
+    | { type: 'navigate_tab'; tab: string }
+    | null
+  >(null);
+
   // Navigation & Modals State
   const [activeTab, setActiveTab] = useState<string>('home');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -38,6 +52,39 @@ export function App() {
   const [selectedPackDetails, setSelectedPackDetails] = useState<QuizPack | null>(null);
   const [activeQuizPack, setActiveQuizPack] = useState<QuizPack | null>(null);
   const [activeQuizQuestions, setActiveQuizQuestions] = useState<Question[]>([]);
+
+  // Authorization check helper for game & puzzle features
+  const checkUserAuthorizedForGames = (action?: { type: 'play_pack'; packId: string } | { type: 'navigate_tab'; tab: string }): boolean => {
+    const cur = dbStore.getCurrentUser();
+
+    // 1. Account must be approved (or master admin)
+    if (cur.role !== 'admin' && cur.approvalStatus !== 'approved') {
+      if (action) setPendingGameAction(action);
+      setAuthNoticeMessage('Your account is currently pending Master Admin approval. You will be able to sign in with your PIN as soon as an admin approves your request.');
+      setIsLoginOpen(true);
+      return false;
+    }
+
+    // 2. Must be signed in with PIN for active session (or master admin)
+    if (!isPinVerified && cur.role !== 'admin') {
+      if (action) setPendingGameAction(action);
+      setAuthNoticeMessage('You must have an approved account and be signed in with your 4-digit PIN number before gaining access to any app game and puzzle features.');
+      setIsLoginOpen(true);
+      return false;
+    }
+
+    return true;
+  };
+
+  // Safe navigation function checking authorization before entering game/puzzle features
+  const handleNavigateTab = (tab: string) => {
+    if (['quiz', 'hidden-image', 'challenges'].includes(tab)) {
+      if (!checkUserAuthorizedForGames({ type: 'navigate_tab', tab })) {
+        return;
+      }
+    }
+    setActiveTab(tab);
+  };
 
   // Reload data from store
   const refreshAllData = () => {
@@ -59,6 +106,10 @@ export function App() {
   };
 
   const handlePlayPackDirect = (packId: string) => {
+    if (!checkUserAuthorizedForGames({ type: 'play_pack', packId })) {
+      return;
+    }
+
     const p = packs.find(item => item.id === packId);
     if (!p) return;
 
@@ -73,6 +124,38 @@ export function App() {
   const handleDownloadPack = (packId: string) => {
     dbStore.markPackDownloaded(packId);
     setDownloadedPackIds(dbStore.getDownloadedPackIds());
+  };
+
+  const handleSuccessLogin = (loggedInUser: UserProfile) => {
+    setUser(loggedInUser);
+    dbStore.saveUser(loggedInUser);
+    dbStore.setCurrentUser(loggedInUser);
+    setIsPinVerified(true);
+    setAuthNoticeMessage(null);
+
+    if (loggedInUser.role === 'admin') {
+      setActiveTab('admin');
+      setPendingGameAction(null);
+      return;
+    }
+
+    // Execute any pending game action that was intercepted
+    if (pendingGameAction) {
+      const act = pendingGameAction;
+      setPendingGameAction(null);
+      if (act.type === 'play_pack') {
+        const p = packs.find(item => item.id === act.packId);
+        if (p) {
+          const allQuestions = dbStore.getQuestions();
+          const packQs = allQuestions.filter(q => q.packId === act.packId).sort((a, b) => a.order - b.order);
+          setActiveQuizPack(p);
+          setActiveQuizQuestions(packQs);
+          setActiveTab('quiz');
+        }
+      } else if (act.type === 'navigate_tab') {
+        setActiveTab(act.tab);
+      }
+    }
   };
 
   return (
@@ -98,9 +181,15 @@ export function App() {
         onClose={() => setIsDrawerOpen(false)}
         user={user}
         activeTab={activeTab}
-        onSelectTab={(tab) => setActiveTab(tab)}
-        onSwitchAccount={() => setIsLoginOpen(true)}
+        onSelectTab={(tab) => handleNavigateTab(tab)}
+        onSwitchAccount={() => {
+          setIsPinVerified(false);
+          setAuthNoticeMessage('Please sign in with your PIN number or request an approved account.');
+          setIsLoginOpen(true);
+        }}
         onLogout={() => {
+          setIsPinVerified(false);
+          setAuthNoticeMessage('You have signed out. Sign in with your 4-digit PIN number to play games and puzzles.');
           setIsLoginOpen(true);
         }}
       />
@@ -116,7 +205,7 @@ export function App() {
             onSearchChange={setSearchQuery}
             onSelectPack={(pack) => setSelectedPackDetails(pack)}
             onPlayPackDirect={handlePlayPackDirect}
-            onNavigateTab={(tab) => setActiveTab(tab)}
+            onNavigateTab={(tab) => handleNavigateTab(tab)}
           />
         )}
 
@@ -132,22 +221,64 @@ export function App() {
         )}
 
         {activeTab === 'hidden-image' && (
-          <HiddenImageScreen
-            user={user}
-            onUpdateUser={handleUpdateUser}
-            onBack={() => setActiveTab('home')}
-            packs={packs}
-            questions={dbStore.getQuestions()}
-          />
+          !isPinVerified && user.role !== 'admin' ? (
+            <div className="p-12 text-center bg-slate-900/90 rounded-3xl border-2 border-amber-500/30 max-w-lg mx-auto space-y-4 my-12 text-white shadow-2xl">
+              <div className="w-16 h-16 bg-amber-500 text-slate-950 rounded-2xl flex items-center justify-center mx-auto shadow-lg">
+                <Lock className="w-8 h-8" />
+              </div>
+              <h3 className="text-2xl font-black">Hidden Picture Game Locked</h3>
+              <p className="text-slate-300 text-xs font-medium leading-relaxed">
+                User must have an approved account and be signed in with their 4-digit PIN number before gaining access to picture puzzles and games.
+              </p>
+              <button
+                onClick={() => {
+                  setAuthNoticeMessage('You must have an approved account and sign in with your 4-digit PIN number before gaining access to Hidden Picture Puzzles.');
+                  setIsLoginOpen(true);
+                }}
+                className="px-8 py-3.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-2xl shadow-xl transition-all"
+              >
+                SIGN IN WITH PIN NUMBER
+              </button>
+            </div>
+          ) : (
+            <HiddenImageScreen
+              user={user}
+              onUpdateUser={handleUpdateUser}
+              onBack={() => setActiveTab('home')}
+              packs={packs}
+              questions={dbStore.getQuestions()}
+            />
+          )
         )}
 
         {activeTab === 'challenges' && (
-          <ChallengesScreen
-            user={user}
-            onUpdateUser={handleUpdateUser}
-            onNavigateTab={(tab) => setActiveTab(tab as any)}
-            onPlayPackDirect={handlePlayPackDirect}
-          />
+          !isPinVerified && user.role !== 'admin' ? (
+            <div className="p-12 text-center bg-slate-900/90 rounded-3xl border-2 border-amber-500/30 max-w-lg mx-auto space-y-4 my-12 text-white shadow-2xl">
+              <div className="w-16 h-16 bg-amber-500 text-slate-950 rounded-2xl flex items-center justify-center mx-auto shadow-lg">
+                <Lock className="w-8 h-8" />
+              </div>
+              <h3 className="text-2xl font-black">Daily Trivia Challenges Locked</h3>
+              <p className="text-slate-300 text-xs font-medium leading-relaxed">
+                User must have an approved account and be signed in with their 4-digit PIN number before gaining access to daily challenge games.
+              </p>
+              <button
+                onClick={() => {
+                  setAuthNoticeMessage('You must have an approved account and sign in with your 4-digit PIN number to unlock Daily Challenges.');
+                  setIsLoginOpen(true);
+                }}
+                className="px-8 py-3.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-2xl shadow-xl transition-all"
+              >
+                SIGN IN WITH PIN NUMBER
+              </button>
+            </div>
+          ) : (
+            <ChallengesScreen
+              user={user}
+              onUpdateUser={handleUpdateUser}
+              onNavigateTab={(tab) => handleNavigateTab(tab as any)}
+              onPlayPackDirect={handlePlayPackDirect}
+            />
+          )
         )}
 
         {activeTab === 'achievements' && (
@@ -160,7 +291,7 @@ export function App() {
         {activeTab === 'leaderboard' && (
           <LeaderboardScreen
             currentUser={user}
-            onNavigateTab={(tab) => setActiveTab(tab)}
+            onNavigateTab={(tab) => handleNavigateTab(tab)}
           />
         )}
 
@@ -173,7 +304,10 @@ export function App() {
             settings={settings}
             onUpdateSettings={handleUpdateSettings}
             user={user}
-            onOpenLogin={() => setIsLoginOpen(true)}
+            onOpenLogin={() => {
+              setAuthNoticeMessage('Sign in with your approved account and 4-digit PIN number.');
+              setIsLoginOpen(true);
+            }}
           />
         )}
 
@@ -203,6 +337,7 @@ export function App() {
               };
               setUser(defaultPlayer);
               dbStore.saveUser(defaultPlayer);
+              setIsPinVerified(false);
               setActiveTab('home');
               setIsLoginOpen(true);
             }}
@@ -210,20 +345,41 @@ export function App() {
         )}
 
         {activeTab === 'quiz' && activeQuizPack && (
-          <QuizPlayerScreen
-            pack={activeQuizPack}
-            questions={activeQuizQuestions}
-            user={user}
-            onUpdateUser={handleUpdateUser}
-            onBack={() => {
-              refreshAllData();
-              setActiveTab('home');
-            }}
-            onCompletePack={() => {
-              refreshAllData();
-              setActiveTab('home');
-            }}
-          />
+          !isPinVerified && user.role !== 'admin' ? (
+            <div className="p-12 text-center bg-slate-900/90 rounded-3xl border-2 border-amber-500/30 max-w-lg mx-auto space-y-4 my-12 text-white shadow-2xl">
+              <div className="w-16 h-16 bg-amber-500 text-slate-950 rounded-2xl flex items-center justify-center mx-auto shadow-lg">
+                <Lock className="w-8 h-8" />
+              </div>
+              <h3 className="text-2xl font-black">Quiz Game Locked</h3>
+              <p className="text-slate-300 text-xs font-medium leading-relaxed">
+                User must have an approved account and be signed in with their 4-digit PIN number before gaining access to quiz game features.
+              </p>
+              <button
+                onClick={() => {
+                  setAuthNoticeMessage('You must have an approved account and sign in with your 4-digit PIN number before gaining access to quiz game features.');
+                  setIsLoginOpen(true);
+                }}
+                className="px-8 py-3.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-2xl shadow-xl transition-all"
+              >
+                SIGN IN WITH PIN NUMBER
+              </button>
+            </div>
+          ) : (
+            <QuizPlayerScreen
+              pack={activeQuizPack}
+              questions={activeQuizQuestions}
+              user={user}
+              onUpdateUser={handleUpdateUser}
+              onBack={() => {
+                refreshAllData();
+                setActiveTab('home');
+              }}
+              onCompletePack={() => {
+                refreshAllData();
+                setActiveTab('home');
+              }}
+            />
+          )
         )}
       </main>
 
@@ -252,7 +408,11 @@ export function App() {
       {/* Login / Master Admin Modal */}
       <LoginModal
         isOpen={isLoginOpen}
-        onClose={() => setIsLoginOpen(false)}
+        authNoticeMessage={authNoticeMessage}
+        onClose={() => {
+          setIsLoginOpen(false);
+          setAuthNoticeMessage(null);
+        }}
         onAdminSignOut={() => {
           const defaultPlayer: UserProfile = dbStore.getAllUsers().find(u => u.role !== 'admin') || {
             id: 'player-1',
@@ -272,15 +432,10 @@ export function App() {
           };
           setUser(defaultPlayer);
           dbStore.saveUser(defaultPlayer);
+          setIsPinVerified(false);
           setActiveTab('home');
         }}
-        onSuccessLogin={(loggedInUser) => {
-          setUser(loggedInUser);
-          dbStore.saveUser(loggedInUser);
-          if (loggedInUser.role === 'admin') {
-            setActiveTab('admin');
-          }
-        }}
+        onSuccessLogin={handleSuccessLogin}
       />
 
     </div>

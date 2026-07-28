@@ -16,6 +16,7 @@ import {
 import { QuizCategory, QuizPack, Question, DifficultyLevel } from '../../types';
 import { dbStore } from '../../lib/storage';
 import { soundFx } from '../../lib/sound';
+import { compressImage } from '../../lib/imageUtils';
 
 interface BulkImageItem {
   id: string;
@@ -74,7 +75,7 @@ export const BulkImageUploader: React.FC<BulkImageUploaderProps> = ({
     return cleanStr.toUpperCase();
   };
 
-  // Process uploaded image files
+  // Process uploaded image files with canvas compression
   const handleFilesAdded = async (files: FileList | File[]) => {
     setIsProcessingFiles(true);
     setStatusMessage(null);
@@ -86,13 +87,8 @@ export const BulkImageUploader: React.FC<BulkImageUploaderProps> = ({
       if (!file.type.startsWith('image/')) continue;
 
       try {
-        const dataUrl = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = (e) => resolve(e.target?.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-
+        // Compress image to max 800x800 JPEG quality 0.8 to fit within Firestore 1MB document limit
+        const dataUrl = await compressImage(file, 800, 800, 0.8);
         const answer = formatFileNameToAnswer(file.name);
 
         newItems.push({
@@ -105,7 +101,7 @@ export const BulkImageUploader: React.FC<BulkImageUploaderProps> = ({
           difficulty: 'Easy'
         });
       } catch (err) {
-        console.error('Error reading image file:', err);
+        console.error('Error reading and compressing image file:', err);
       }
     }
 
@@ -143,7 +139,7 @@ export const BulkImageUploader: React.FC<BulkImageUploaderProps> = ({
     );
   };
 
-  const handleSaveBulkUpload = () => {
+  const handleSaveBulkUpload = async () => {
     if (uploadedItems.length === 0) return;
 
     soundFx.playCorrect();
@@ -151,6 +147,11 @@ export const BulkImageUploader: React.FC<BulkImageUploaderProps> = ({
     let targetPackId = selectedPackId;
     const selectedCategoryObj = categories.find(c => c.id === selectedCategoryId);
     const categoryName = selectedCategoryObj ? selectedCategoryObj.name : 'General';
+
+    // Ensure category is present in database
+    if (selectedCategoryObj) {
+      dbStore.saveCategory(selectedCategoryObj);
+    }
 
     // If creating a new pack
     if (packOption === 'new' || !targetPackId) {
@@ -179,14 +180,22 @@ export const BulkImageUploader: React.FC<BulkImageUploaderProps> = ({
       dbStore.savePack(newPack);
     }
 
-    // Convert each item to Question
+    // Convert each item to Question and compress image if necessary
     let savedCount = 0;
-    uploadedItems.forEach((item, idx) => {
+    for (let idx = 0; idx < uploadedItems.length; idx++) {
+      const item = uploadedItems[idx];
+      let finalImg = item.dataUrl;
+
+      // Double-check image size safety
+      if (finalImg.length > 500000) {
+        finalImg = await compressImage(finalImg, 800, 800, 0.75);
+      }
+
       const newQuestion: Question = {
-        id: `q_bulk_${Date.now()}_${idx}`,
+        id: `q_bulk_${Date.now()}_${idx}_${Math.random().toString(36).substr(2, 4)}`,
         packId: targetPackId,
         order: idx + 1,
-        image: item.dataUrl,
+        image: finalImg,
         correctAnswer: item.answer.toUpperCase().trim(),
         difficulty: item.difficulty,
         hint: item.hint.trim(),
@@ -197,9 +206,9 @@ export const BulkImageUploader: React.FC<BulkImageUploaderProps> = ({
 
       dbStore.saveQuestion(newQuestion);
       savedCount++;
-    });
+    }
 
-    // Update pack question count
+    // Update pack question count & thumbnail
     const updatedPacks = dbStore.getPacks();
     const targetPack = updatedPacks.find(p => p.id === targetPackId);
     if (targetPack) {
@@ -219,7 +228,7 @@ export const BulkImageUploader: React.FC<BulkImageUploaderProps> = ({
 
     setStatusMessage({
       type: 'success',
-      text: `Successfully uploaded ${savedCount} picture questions to database!`
+      text: `Successfully saved & synced ${savedCount} picture questions to Firestore database!`
     });
 
     setUploadedItems([]);

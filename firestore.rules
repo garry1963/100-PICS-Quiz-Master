@@ -1,45 +1,31 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper function to check if authenticated user is the single authorized Master Admin
-    function isMasterAdmin() {
-      return request.auth != null && (
-        request.auth.token.email == 'garrydavies1963@gmail.com' ||
-        get(/databases/$(database)/documents/systemConfig/admin).data.masterAdminEmail == request.auth.token.email
-      );
-    }
-
     // Secure System Configuration for Master Admin validation
     match /systemConfig/{configId} {
-      allow read: if true;
-      allow write: if isMasterAdmin();
+      allow read, write: if true;
     }
 
-    // Quiz Packs, Questions, Categories: Publicly readable for gameplay
+    // Quiz Packs, Questions, Categories: Publicly readable and writable for app synchronization
     match /quizPacks/{packId} {
-      allow read: if true;
-      allow write: if isMasterAdmin() || request.auth != null;
+      allow read, write: if true;
     }
 
     match /questions/{questionId} {
-      allow read: if true;
-      allow write: if isMasterAdmin() || request.auth != null;
+      allow read, write: if true;
     }
 
     match /categories/{categoryId} {
-      allow read: if true;
-      allow write: if isMasterAdmin() || request.auth != null;
+      allow read, write: if true;
     }
 
     // User profiles & Approved Users
     match /users/{userId} {
-      allow read: if true;
-      allow write: if true;
+      allow read, write: if true;
     }
 
     match /approvedUsers/{userId} {
-      allow read: if true;
-      allow write: if true;
+      allow read, write: if true;
     }
 
     // Player Progress records

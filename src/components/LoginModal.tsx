@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Shield, User, Lock, ArrowRight, AlertCircle, CheckCircle2, KeyRound, Clock, UserPlus, LogOut, Mail, Check } from 'lucide-react';
 import { apiClient } from '../lib/apiClient';
 import {
@@ -18,13 +18,15 @@ interface LoginModalProps {
   onClose: () => void;
   onSuccessLogin: (user: UserProfile) => void;
   onAdminSignOut?: () => void;
+  authNoticeMessage?: string | null;
 }
 
 export const LoginModal: React.FC<LoginModalProps> = ({
   isOpen,
   onClose,
   onSuccessLogin,
-  onAdminSignOut
+  onAdminSignOut,
+  authNoticeMessage
 }) => {
   if (!isOpen) return null;
 
@@ -49,6 +51,26 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [showDirectInput, setShowDirectInput] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && mode === 'player') {
+      const cur = dbStore.getCurrentUser();
+      if (cur && cur.role === 'player') {
+        setTargetUser(cur);
+        if (cur.approvalStatus === 'pending') {
+          setPlayerStep('pending_notice');
+        } else if (cur.approvalStatus === 'rejected') {
+          setPlayerStep('rejected_notice');
+        } else if (cur.approvalStatus === 'approved') {
+          if (!cur.pin || cur.pin.trim().length !== 4) {
+            setPlayerStep('pin_setup');
+          } else {
+            setPlayerStep('pin_verify');
+          }
+        }
+      }
+    }
+  }, [isOpen, mode]);
 
   const resetModalState = () => {
     setErrorMessage(null);
@@ -311,6 +333,17 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {/* Notice Banner when redirected from game feature */}
+        {authNoticeMessage && (
+          <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/60 border-2 border-amber-300 dark:border-amber-800/80 text-amber-900 dark:text-amber-200 text-xs font-bold flex items-start gap-2.5 shadow-xs animate-in fade-in">
+            <Lock className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <div className="font-black uppercase tracking-wider text-[11px] text-amber-800 dark:text-amber-300 mb-0.5">Approval & PIN Required</div>
+              <p className="leading-relaxed font-medium text-amber-900 dark:text-amber-200">{authNoticeMessage}</p>
+            </div>
+          </div>
+        )}
 
         {/* Tab Switcher: Player vs Admin */}
         <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 text-xs font-black">
