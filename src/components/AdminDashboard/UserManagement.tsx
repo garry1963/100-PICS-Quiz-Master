@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Shield, Ban, CheckCircle2, RotateCcw, Coins, Trophy, UserPlus, Clock, XCircle, KeyRound, Check, RefreshCw } from 'lucide-react';
+import { Users, Shield, Ban, CheckCircle2, RotateCcw, Coins, Trophy, UserPlus, Clock, XCircle, KeyRound, Check, RefreshCw, Trash2 } from 'lucide-react';
 import { UserProfile } from '../../types';
 import { dbStore } from '../../lib/storage';
 import { soundFx } from '../../lib/sound';
@@ -8,6 +8,7 @@ import {
   fetchApprovedUsersFromFirestore,
   approveUserInFirestore,
   rejectUserInFirestore,
+  deleteUserFromFirestore,
   MASTER_ADMIN_EMAIL
 } from '../../lib/firebase';
 
@@ -93,6 +94,23 @@ export const UserManagement: React.FC = () => {
     dbStore.addLog('info', 'admin', `Reset 4-digit PIN for ${user.username}`);
     alert(`4-Digit PIN reset for ${user.username}. They will be prompted to create a new 4-digit PIN upon next login.`);
     reloadUsers();
+  };
+
+  const handleDeleteUser = async (user: UserProfile) => {
+    soundFx.playClick();
+    if (user.role === 'admin' || user.email.toLowerCase() === MASTER_ADMIN_EMAIL.toLowerCase()) {
+      alert('The Master Administrator account cannot be deleted.');
+      return;
+    }
+
+    const confirmed = confirm(`CRITICAL DELETION WARNING:\n\nAre you sure you want to permanently delete user account "${user.username}" (${user.email}) and ALL associated database records from Firestore and local storage? This action cannot be undone.`);
+    if (!confirmed) return;
+
+    dbStore.deleteUser(user.id);
+    await deleteUserFromFirestore(user.id);
+    dbStore.addLog('warn', 'admin', `Master Admin deleted user account and associated data for ${user.username} (${user.email})`);
+    soundFx.playCorrect();
+    await reloadUsers();
   };
 
   const pendingUsers = users.filter(u => u.approvalStatus === 'pending');
@@ -324,6 +342,14 @@ export const UserManagement: React.FC = () => {
                               }`}
                             >
                               {u.isBanned ? 'Unban' : 'Ban'}
+                            </button>
+                            <button
+                              onClick={() => handleDeleteUser(u)}
+                              className="px-2.5 py-1 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-extrabold transition-all shadow-xs inline-flex items-center gap-1"
+                              title="Permanently delete user account and associated records"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Delete</span>
                             </button>
                           </>
                         )}

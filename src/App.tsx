@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { dbStore } from './lib/storage';
+import { signOutAdmin } from './lib/firebase';
 import { UserProfile, AccessibilitySettings, QuizPack, Question } from './types';
 import { soundFx } from './lib/sound';
 import { Lock, ShieldCheck, KeyRound } from 'lucide-react';
@@ -29,10 +30,12 @@ export function App() {
   const [downloadedPackIds, setDownloadedPackIds] = useState<string[]>(() => dbStore.getDownloadedPackIds());
 
   // Security & Authentication verification state
-  // Signed in with 4-digit PIN / Admin authorization
+  // Signed in with 4-digit PIN / Admin authorization per active browser session
   const [isPinVerified, setIsPinVerified] = useState<boolean>(() => {
-    const cur = dbStore.getCurrentUser();
-    return cur.role === 'admin';
+    // When the app is closed or re-started, sessionStorage is automatically cleared.
+    // This enforces that users must sign in again upon app launch.
+    const activeSession = sessionStorage.getItem('active_session_auth');
+    return activeSession === 'true';
   });
   const [authNoticeMessage, setAuthNoticeMessage] = useState<string | null>(null);
   const [pendingGameAction, setPendingGameAction] = useState<
@@ -40,6 +43,39 @@ export function App() {
     | { type: 'navigate_tab'; tab: string }
     | null
   >(null);
+
+  // Sign Out Handler for Master Admin and Players
+  const handleSignOutAll = async () => {
+    sessionStorage.removeItem('active_session_auth');
+    try {
+      await signOutAdmin();
+    } catch (e) {
+      console.warn('Sign out error:', e);
+    }
+    const defaultPlayer: UserProfile = dbStore.getAllUsers().find(u => u.role !== 'admin') || {
+      id: 'player-1',
+      username: 'PlayerOne',
+      email: 'player@example.com',
+      role: 'player',
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
+      coins: 100,
+      xp: 150,
+      level: 2,
+      title: 'Puzzle Rookie',
+      currentStreak: 1,
+      longestStreak: 3,
+      lastLoginDate: new Date().toISOString().split('T')[0],
+      createdAt: new Date().toISOString(),
+      approvalStatus: 'approved'
+    };
+    setUser(defaultPlayer);
+    dbStore.saveUser(defaultPlayer);
+    dbStore.setCurrentUser(defaultPlayer);
+    setIsPinVerified(false);
+    setActiveTab('home');
+    setAuthNoticeMessage('You have signed out. Please sign in with your PIN or Master Admin credentials.');
+    setIsLoginOpen(true);
+  };
 
   // Navigation & Modals State
   const [activeTab, setActiveTab] = useState<string>('home');
@@ -127,6 +163,7 @@ export function App() {
   };
 
   const handleSuccessLogin = (loggedInUser: UserProfile) => {
+    sessionStorage.setItem('active_session_auth', 'true');
     setUser(loggedInUser);
     dbStore.saveUser(loggedInUser);
     dbStore.setCurrentUser(loggedInUser);
@@ -183,14 +220,10 @@ export function App() {
         activeTab={activeTab}
         onSelectTab={(tab) => handleNavigateTab(tab)}
         onSwitchAccount={() => {
-          setIsPinVerified(false);
-          setAuthNoticeMessage('Please sign in with your PIN number or request an approved account.');
-          setIsLoginOpen(true);
+          handleSignOutAll();
         }}
         onLogout={() => {
-          setIsPinVerified(false);
-          setAuthNoticeMessage('You have signed out. Sign in with your 4-digit PIN number to play games and puzzles.');
-          setIsLoginOpen(true);
+          handleSignOutAll();
         }}
       />
 
@@ -318,29 +351,7 @@ export function App() {
               refreshAllData();
               setActiveTab('home');
             }}
-            onAdminSignOut={() => {
-              const defaultPlayer: UserProfile = dbStore.getAllUsers().find(u => u.role !== 'admin') || {
-                id: 'player-1',
-                username: 'PlayerOne',
-                email: 'player@example.com',
-                role: 'player',
-                avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
-                coins: 100,
-                xp: 150,
-                level: 2,
-                title: 'Puzzle Rookie',
-                currentStreak: 1,
-                longestStreak: 3,
-                lastLoginDate: new Date().toISOString().split('T')[0],
-                createdAt: new Date().toISOString(),
-                approvalStatus: 'approved'
-              };
-              setUser(defaultPlayer);
-              dbStore.saveUser(defaultPlayer);
-              setIsPinVerified(false);
-              setActiveTab('home');
-              setIsLoginOpen(true);
-            }}
+            onAdminSignOut={handleSignOutAll}
           />
         )}
 
@@ -413,28 +424,7 @@ export function App() {
           setIsLoginOpen(false);
           setAuthNoticeMessage(null);
         }}
-        onAdminSignOut={() => {
-          const defaultPlayer: UserProfile = dbStore.getAllUsers().find(u => u.role !== 'admin') || {
-            id: 'player-1',
-            username: 'PlayerOne',
-            email: 'player@example.com',
-            role: 'player',
-            avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
-            coins: 100,
-            xp: 150,
-            level: 2,
-            title: 'Puzzle Rookie',
-            currentStreak: 1,
-            longestStreak: 3,
-            lastLoginDate: new Date().toISOString().split('T')[0],
-            createdAt: new Date().toISOString(),
-            approvalStatus: 'approved'
-          };
-          setUser(defaultPlayer);
-          dbStore.saveUser(defaultPlayer);
-          setIsPinVerified(false);
-          setActiveTab('home');
-        }}
+        onAdminSignOut={handleSignOutAll}
         onSuccessLogin={handleSuccessLogin}
       />
 

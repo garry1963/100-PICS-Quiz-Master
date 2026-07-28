@@ -17,7 +17,8 @@ import {
   Upload,
   Check,
   AlertTriangle,
-  LogOut
+  LogOut,
+  Activity
 } from 'lucide-react';
 import { UserProfile, QuizCategory, QuizPack, Question, SystemLog } from '../../types';
 import { soundFx } from '../../lib/sound';
@@ -35,6 +36,7 @@ import { DatabaseMaintenance } from './DatabaseMaintenance';
 import { SystemLogs } from './SystemLogs';
 import { CategoryManager } from './CategoryManager';
 import { BulkImageUploader } from './BulkImageUploader';
+import { FirestoreStressTester } from './FirestoreStressTester';
 
 interface AdminDashboardProps {
   currentUser: UserProfile;
@@ -47,7 +49,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onBackToGame,
   onAdminSignOut
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'categories' | 'bulk-images' | 'packs' | 'questions' | 'ai' | 'users' | 'import' | 'database' | 'logs'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'categories' | 'bulk-images' | 'packs' | 'questions' | 'ai' | 'users' | 'import' | 'database' | 'diagnostics' | 'logs'>('overview');
   const [selectedCategoryForBulkUpload, setSelectedCategoryForBulkUpload] = useState<string | undefined>(undefined);
 
   const handleAdminSignOut = async () => {
@@ -257,6 +259,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </button>
 
         <button
+          id="tab-diagnostics-btn"
+          onClick={() => { soundFx.playClick(); setActiveTab('diagnostics'); }}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black transition-all whitespace-nowrap ${
+            activeTab === 'diagnostics'
+              ? 'bg-emerald-600 text-white shadow-xs font-black'
+              : 'bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800'
+          }`}
+        >
+          <Activity className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
+          <span>🔥 Firestore Stress Diagnostic</span>
+        </button>
+
+        <button
           id="tab-logs-btn"
           onClick={() => { soundFx.playClick(); setActiveTab('logs'); }}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black transition-all whitespace-nowrap ${
@@ -359,6 +374,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         {activeTab === 'import' && <BulkImportExport />}
         {activeTab === 'users' && <UserManagement />}
         {activeTab === 'database' && <DatabaseMaintenance />}
+        {activeTab === 'diagnostics' && <FirestoreStressTester />}
         {activeTab === 'logs' && <SystemLogs />}
       </div>
 

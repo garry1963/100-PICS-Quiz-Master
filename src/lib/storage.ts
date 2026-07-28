@@ -28,6 +28,7 @@ import {
   saveQuestionToFirestore,
   deleteQuestionFromFirestore,
   saveUserToFirestore,
+  deleteUserFromFirestore,
   saveProgressToFirestore,
   addLogToFirestore,
   seedFirestoreIfEmpty,
@@ -228,6 +229,16 @@ class LocalStorageEngine {
       this.setItem(KEYS.USERS, users);
     }
     saveUserToFirestore(user).catch(() => {});
+  }
+
+  public deleteUser(userId: string) {
+    const users = this.getAllUsers().filter(u => u.id !== userId);
+    this.setItem(KEYS.USERS, users);
+    const curr = this.getCurrentUser();
+    if (curr.id === userId) {
+      this.setItem(KEYS.CURRENT_USER, DEFAULT_MASTER_ADMIN);
+    }
+    deleteUserFromFirestore(userId).catch(() => {});
   }
 
   // --- CATEGORIES ---
