@@ -117,6 +117,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
         <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
           <button
+            id="header-firestore-diagnostic-btn"
+            onClick={() => {
+              soundFx.playClick();
+              setActiveTab('diagnostics');
+            }}
+            className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-wider transition-all shadow-md shadow-emerald-600/30 cursor-pointer"
+          >
+            <Activity className="w-4 h-4 text-emerald-200 animate-pulse" />
+            <span>🔥 Firestore Stress Diagnostic</span>
+          </button>
+
+          <button
             id="admin-signout-btn"
             onClick={handleAdminSignOut}
             className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white font-extrabold text-xs uppercase tracking-wider transition-all shadow-sm"
@@ -140,7 +152,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       </div>
 
       {/* Admin Navigation Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-slate-200 dark:border-slate-800 scrollbar-none">
+      <div className="flex flex-wrap items-center gap-2 pb-2 border-b border-slate-200 dark:border-slate-800">
         <button
           id="tab-overview-btn"
           onClick={() => { soundFx.playClick(); setActiveTab('overview'); }}
@@ -152,6 +164,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         >
           <BarChart3 className="w-4 h-4" />
           <span>Overview & Stats</span>
+        </button>
+
+        <button
+          id="tab-diagnostics-btn"
+          onClick={() => { soundFx.playClick(); setActiveTab('diagnostics'); }}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black transition-all whitespace-nowrap ${
+            activeTab === 'diagnostics'
+              ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30 font-black'
+              : 'bg-emerald-950/20 hover:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40'
+          }`}
+        >
+          <Activity className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
+          <span>🔥 Firestore Stress Diagnostic</span>
         </button>
 
         <button
@@ -256,19 +281,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         >
           <Database className="w-4 h-4" />
           <span>Backups & Restore</span>
-        </button>
-
-        <button
-          id="tab-diagnostics-btn"
-          onClick={() => { soundFx.playClick(); setActiveTab('diagnostics'); }}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black transition-all whitespace-nowrap ${
-            activeTab === 'diagnostics'
-              ? 'bg-emerald-600 text-white shadow-xs font-black'
-              : 'bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800'
-          }`}
-        >
-          <Activity className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
-          <span>🔥 Firestore Stress Diagnostic</span>
         </button>
 
         <button

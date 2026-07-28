@@ -408,8 +408,12 @@ class LocalStorageEngine {
   }
 
   // --- QUESTION ANSWERS ---
+  public getAllAnswerStates(): Record<string, QuestionAnswerState> {
+    return this.getItem<Record<string, QuestionAnswerState>>(KEYS.ANSWERS, {});
+  }
+
   public getQuestionAnswerState(questionId: string): QuestionAnswerState | null {
-    const all = this.getItem<Record<string, QuestionAnswerState>>(KEYS.ANSWERS, {});
+    const all = this.getAllAnswerStates();
     return all[questionId] || null;
   }
 
@@ -474,6 +478,26 @@ class LocalStorageEngine {
   public clearUserProgress() {
     this.setItem(KEYS.PROGRESS, {});
     this.setItem(KEYS.ANSWERS, {});
+  }
+
+  public clearPersonalStats(user: UserProfile): UserProfile {
+    this.setItem(KEYS.PROGRESS, {});
+    this.setItem(KEYS.ANSWERS, {});
+    
+    const updatedUser: UserProfile = {
+      ...user,
+      coins: 100,
+      xp: 0,
+      level: 1,
+      title: 'Puzzle Rookie',
+      currentStreak: 0,
+      longestStreak: 0
+    };
+    
+    this.saveUser(updatedUser);
+    this.setCurrentUser(updatedUser);
+    this.addLog('info', 'auth', `Personal statistics and progress cleared for ${user.username}`);
+    return updatedUser;
   }
 
   // --- CHALLENGES ---

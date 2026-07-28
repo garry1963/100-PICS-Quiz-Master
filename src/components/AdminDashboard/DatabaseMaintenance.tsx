@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Database, RotateCcw, Upload, CheckCircle2, AlertTriangle, HardDrive } from 'lucide-react';
+import React from 'react';
+import { Upload, RotateCcw, Trash2 } from 'lucide-react';
 import { dbStore } from '../../lib/storage';
 import { soundFx } from '../../lib/sound';
 import { FirestoreStressTester } from './FirestoreStressTester';
@@ -35,6 +35,17 @@ export const DatabaseMaintenance: React.FC = () => {
     }
   };
 
+  const handleClearAllStats = () => {
+    soundFx.playClick();
+    if (confirm('Are you sure you want to clear all user statistics, solved question records, and accuracy logs across the application?')) {
+      const curr = dbStore.getCurrentUser();
+      dbStore.clearPersonalStats(curr);
+      soundFx.playCorrect();
+      alert('All personal and player statistics have been cleared.');
+      window.location.reload();
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -45,7 +56,7 @@ export const DatabaseMaintenance: React.FC = () => {
       {/* Firestore Stress Tester Component */}
       <FirestoreStressTester />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Restore from File */}
         <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700 space-y-3">
           <div className="flex items-center gap-2 font-bold text-sm text-slate-100">
@@ -60,6 +71,24 @@ export const DatabaseMaintenance: React.FC = () => {
             <span>Choose Backup File (.json)</span>
             <input type="file" accept=".json" onChange={handleRestoreFile} className="hidden" />
           </label>
+        </div>
+
+        {/* Clear Personal Statistics */}
+        <div className="p-5 rounded-2xl bg-slate-800/80 border border-amber-500/30 space-y-3">
+          <div className="flex items-center gap-2 font-bold text-sm text-amber-300">
+            <Trash2 className="w-5 h-5 text-amber-400" />
+            <span>Clear Personal Statistics</span>
+          </div>
+          <p className="text-xs text-slate-400">
+            Clears all gameplay progress, solved picture counts, streak logs, and accuracy stats.
+          </p>
+
+          <button
+            onClick={handleClearAllStats}
+            className="w-full py-3 rounded-xl bg-amber-600/20 hover:bg-amber-600/40 border border-amber-500/40 text-amber-300 font-bold text-xs transition-colors"
+          >
+            CLEAR ALL STATISTICS
+          </button>
         </div>
 
         {/* Factory Reset */}

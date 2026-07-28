@@ -329,7 +329,7 @@ export function App() {
         )}
 
         {activeTab === 'stats' && (
-          <StatisticsScreen user={user} />
+          <StatisticsScreen user={user} onUpdateUser={handleUpdateUser} />
         )}
 
         {activeTab === 'settings' && (
