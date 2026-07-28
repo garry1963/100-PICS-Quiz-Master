@@ -23,20 +23,20 @@ import { HiddenImageScreen } from './components/HiddenImageScreen';
 import { LeaderboardScreen } from './components/LeaderboardScreen';
 
 export function App() {
-  // Helper to get default guest player profile
-  const getDefaultPlayer = (): UserProfile => {
-    return dbStore.getAllUsers().find(u => u.role !== 'admin' && u.id === 'player-1') || {
-      id: 'player-1',
-      username: 'PlayerOne',
-      email: 'player@example.com',
+  // Helper to get default clean guest player profile
+  const getDefaultGuestPlayer = (): UserProfile => {
+    return {
+      id: 'guest-player',
+      username: 'Guest Player',
+      email: 'guest@100pics.app',
       role: 'player',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
-      coins: 100,
-      xp: 150,
-      level: 2,
-      title: 'Puzzle Rookie',
-      currentStreak: 1,
-      longestStreak: 3,
+      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=250',
+      coins: 0,
+      xp: 0,
+      level: 1,
+      title: 'Guest',
+      currentStreak: 0,
+      longestStreak: 0,
       lastLoginDate: new Date().toISOString().split('T')[0],
       createdAt: new Date().toISOString(),
       approvalStatus: 'approved'
@@ -55,25 +55,14 @@ export function App() {
   const [user, setUser] = useState<UserProfile>(() => {
     const activeSession = sessionStorage.getItem('active_session_auth');
     if (activeSession === 'true') {
-      return dbStore.getCurrentUser();
+      const cur = dbStore.getCurrentUser();
+      if (cur.username === 'PlayerOne' || cur.id === 'player-1' || cur.id === 'player-guest-101') {
+        return getDefaultGuestPlayer();
+      }
+      return cur;
     } else {
       // Auto sign-out on app launch / closed & restarted
-      const guestPlayer = dbStore.getAllUsers().find(u => u.role !== 'admin' && u.id === 'player-1') || {
-        id: 'player-1',
-        username: 'PlayerOne',
-        email: 'player@example.com',
-        role: 'player',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
-        coins: 100,
-        xp: 150,
-        level: 2,
-        title: 'Puzzle Rookie',
-        currentStreak: 1,
-        longestStreak: 3,
-        lastLoginDate: new Date().toISOString().split('T')[0],
-        createdAt: new Date().toISOString(),
-        approvalStatus: 'approved'
-      };
+      const guestPlayer = getDefaultGuestPlayer();
       dbStore.setCurrentUser(guestPlayer);
       signOutAdmin().catch(() => {});
       return guestPlayer;
@@ -90,7 +79,7 @@ export function App() {
     const activeSession = sessionStorage.getItem('active_session_auth');
     if (activeSession !== 'true') {
       setIsPinVerified(false);
-      const guestPlayer = getDefaultPlayer();
+      const guestPlayer = getDefaultGuestPlayer();
       setUser(guestPlayer);
       dbStore.setCurrentUser(guestPlayer);
       signOutAdmin().catch(() => {});
@@ -112,7 +101,7 @@ export function App() {
     } catch (e) {
       console.warn('Sign out error:', e);
     }
-    const defaultPlayer = getDefaultPlayer();
+    const defaultPlayer = getDefaultGuestPlayer();
     setUser(defaultPlayer);
     dbStore.saveUser(defaultPlayer);
     dbStore.setCurrentUser(defaultPlayer);

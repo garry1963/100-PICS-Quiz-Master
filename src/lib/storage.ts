@@ -96,14 +96,14 @@ class LocalStorageEngine {
     );
     this.setItem(KEYS.QUESTIONS, cleanQuestions);
 
-    const cleanUsers = this.getAllUsers().filter(u => u.id !== 'player-guest-101' && u.id !== 'player-1');
+    const cleanUsers = this.getAllUsers().filter(u => u.id !== 'player-guest-101' && u.id !== 'player-1' && u.username !== 'PlayerOne');
     if (cleanUsers.length === 0) {
       cleanUsers.push(DEFAULT_MASTER_ADMIN);
     }
     this.setItem(KEYS.USERS, cleanUsers);
 
     const curr = this.getCurrentUser();
-    if (curr.id === 'player-guest-101' || curr.id === 'player-1') {
+    if (curr.id === 'player-guest-101' || curr.id === 'player-1' || curr.username === 'PlayerOne') {
       this.setItem(KEYS.CURRENT_USER, DEFAULT_MASTER_ADMIN);
     }
 
@@ -193,7 +193,7 @@ class LocalStorageEngine {
 
   // --- USER AUTH & PROFILES ---
   public getCurrentUser(): UserProfile {
-    return this.getItem<UserProfile>(KEYS.CURRENT_USER, DEFAULT_PLAYER);
+    return this.getItem<UserProfile>(KEYS.CURRENT_USER, DEFAULT_MASTER_ADMIN);
   }
 
   public setCurrentUser(user: UserProfile) {
@@ -203,7 +203,9 @@ class LocalStorageEngine {
   }
 
   public getAllUsers(): UserProfile[] {
-    return this.getItem<UserProfile[]>(KEYS.USERS, [DEFAULT_MASTER_ADMIN, DEFAULT_PLAYER]);
+    return this.getItem<UserProfile[]>(KEYS.USERS, [DEFAULT_MASTER_ADMIN]).filter(
+      u => u.username !== 'PlayerOne' && u.id !== 'player-1' && u.id !== 'player-guest-101'
+    );
   }
 
   public saveUser(user: UserProfile) {
