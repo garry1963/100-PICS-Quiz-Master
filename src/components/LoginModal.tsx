@@ -323,7 +323,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             Player Account
           </button>
           <button
-            onClick={() => { resetModalState(); setMode('admin'); }}
+            onClick={() => { resetModalState(); setMode('admin'); setShowDirectInput(true); }}
             className={`py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all ${
               mode === 'admin' ? 'bg-amber-500 text-slate-950 font-black shadow-xs' : 'text-amber-600 dark:text-amber-400'
             }`}

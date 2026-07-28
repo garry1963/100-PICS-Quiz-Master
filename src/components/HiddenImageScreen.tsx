@@ -16,7 +16,9 @@ import {
   Trophy,
   Shuffle,
   Zap,
-  Info
+  Info,
+  Image as ImageIcon,
+  Tag
 } from 'lucide-react';
 import { UserProfile, QuizPack, Question } from '../types';
 import { dbStore } from '../lib/storage';
@@ -241,9 +243,9 @@ export const HiddenImageScreen: React.FC<HiddenImageScreenProps> = ({
 
       // Trigger celebratory confetti burst
       confetti({
-        particleCount: 100,
-        spread: 80,
-        origin: { y: 0.6 },
+        particleCount: 120,
+        spread: 90,
+        origin: { y: 0.5 },
         colors: ['#f59e0b', '#6366f1', '#10b981', '#ec4899', '#3b82f6']
       });
 
@@ -340,9 +342,9 @@ export const HiddenImageScreen: React.FC<HiddenImageScreenProps> = ({
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-4 space-y-5">
+    <div className="max-w-3xl mx-auto px-4 py-4 space-y-5">
       
-      {/* Top Header & Gameplay Controls */}
+      {/* Top Header Bar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-4 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-[28px] shadow-xs text-slate-800 dark:text-slate-100">
         <div className="flex items-center gap-3">
           <button
@@ -361,7 +363,7 @@ export const HiddenImageScreen: React.FC<HiddenImageScreenProps> = ({
             <div className="flex items-center gap-2">
               <h2 className="font-black text-base text-slate-900 dark:text-slate-100 uppercase tracking-tight flex items-center gap-1.5">
                 <EyeOff className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                Hidden Image Puzzle
+                Hidden Picture Quiz
               </h2>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 font-extrabold">
@@ -370,65 +372,124 @@ export const HiddenImageScreen: React.FC<HiddenImageScreenProps> = ({
           </div>
         </div>
 
-        {/* Filters & Controls */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
-          {/* Pack Selector */}
-          <select
-            value={selectedPackId}
-            onChange={(e) => {
-              soundFx.playClick();
-              setSelectedPackId(e.target.value);
-              setCurrentQuestionIndex(0);
-            }}
-            className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-extrabold text-xs border border-slate-200 dark:border-slate-700 focus:outline-none"
-          >
-            <option value="all">All Category Packs</option>
-            {packs.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.title}
-              </option>
-            ))}
-          </select>
-
+        {/* Controls: Grid Size & Coins */}
+        <div className="flex items-center gap-2">
           {/* Grid Size Toggle */}
           <button
             onClick={() => {
               soundFx.playClick();
               setGridSize(gridSize === 4 ? 5 : 4);
             }}
-            className="px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 font-black text-xs flex items-center gap-1"
-            title="Toggle Grid Size"
+            className="px-3 py-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 font-black text-xs flex items-center gap-1.5"
+            title="Toggle Tile Grid Density"
           >
-            <Grid className="w-3.5 h-3.5" />
-            <span>{gridSize}x{gridSize} ({totalTiles} tiles)</span>
+            <Grid className="w-4 h-4" />
+            <span>{gridSize}x{gridSize} ({totalTiles} Tiles)</span>
           </button>
 
           {/* Coins Badge */}
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 font-black text-xs">
+          <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 font-black text-xs">
             <Coins className="w-4 h-4 text-amber-500 fill-amber-500" />
             <span>{user.coins}</span>
           </div>
         </div>
       </div>
 
-      {/* Main Game Stage */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
-        
-        {/* Left Column: Covered Hidden Image Canvas */}
-        <div className="md:col-span-5 flex flex-col items-center">
-          
-          <div className="relative w-full aspect-square max-w-sm bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 rounded-[28px] overflow-hidden shadow-xs group select-none">
-            
-            {/* The Actual Hidden Image Underneath */}
-            <img
-              src={currentQuestion.image}
-              alt="Hidden Quiz Clue"
-              className="w-full h-full object-cover rounded-[26px]"
-            />
+      {/* Hidden Picture Category / Pack Navigation Tabs */}
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between px-1 text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+          <span className="flex items-center gap-1.5">
+            <Tag className="w-3.5 h-3.5 text-indigo-500" />
+            Select Picture Pack
+          </span>
+          <span className="text-[10px] text-slate-400 font-bold">{filteredQuestions.length} Puzzles</span>
+        </div>
 
-            {/* Interactive Cover Grid Tiles Overlay */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+          <button
+            onClick={() => {
+              soundFx.playClick();
+              setSelectedPackId('all');
+              setCurrentQuestionIndex(0);
+            }}
+            className={`px-4 py-2 rounded-2xl text-xs font-black whitespace-nowrap transition-all flex items-center gap-1.5 ${
+              selectedPackId === 'all'
+                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20 ring-2 ring-indigo-400'
+                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+            }`}
+          >
+            <span>All Picture Packs</span>
+            <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
+              selectedPackId === 'all' ? 'bg-indigo-700 text-indigo-100' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
+            }`}>
+              {availableQuestions.length}
+            </span>
+          </button>
+
+          {packs.map((p) => {
+            const packQCount = availableQuestions.filter(q => q.packId === p.id).length;
+            if (packQCount === 0) return null;
+
+            const isSelected = selectedPackId === p.id;
+            return (
+              <button
+                key={p.id}
+                onClick={() => {
+                  soundFx.playClick();
+                  setSelectedPackId(p.id);
+                  setCurrentQuestionIndex(0);
+                }}
+                className={`px-4 py-2 rounded-2xl text-xs font-black whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                  isSelected
+                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20 ring-2 ring-indigo-400'
+                    : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+                }`}
+              >
+                <span>{p.title}</span>
+                <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
+                  isSelected ? 'bg-indigo-700 text-indigo-100' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
+                }`}>
+                  {packQCount}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* SECTION 1: ENLARGED HIDDEN PICTURE (POSITIONED ABOVE LETTERS & SLOTS) */}
+      <div className="bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-[32px] p-4 sm:p-6 shadow-md space-y-4 text-center">
+        
+        {/* Tab Header Badge for Hidden Picture */}
+        <div className="flex items-center justify-between text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 px-1">
+          <span className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 font-black">
+            <ImageIcon className="w-4 h-4" />
+            Hidden Picture Clue
+          </span>
+          <span className="flex items-center gap-1 text-slate-400 text-[11px]">
+            <Eye className="w-3.5 h-3.5 text-indigo-500" />
+            {isCorrect ? (
+              <strong className="text-emerald-600 dark:text-emerald-400 font-extrabold">100% Revealed</strong>
+            ) : (
+              <span>Revealed: <strong className="text-indigo-600 dark:text-indigo-400">{tilesRevealedCount}</strong> / {totalTiles}</span>
+            )}
+          </span>
+        </div>
+
+        {/* Enlarged Picture Canvas Frame */}
+        <div className="relative w-full aspect-square max-w-md sm:max-w-lg mx-auto bg-slate-950 border-4 border-slate-200 dark:border-slate-800 rounded-[28px] overflow-hidden shadow-xl group select-none transition-all">
+          
+          {/* The Actual Hidden Image - Always crisp and fully unblurred once solved */}
+          <img
+            src={currentQuestion.image}
+            alt="Hidden Quiz Clue"
+            className="w-full h-full object-cover rounded-[24px]"
+          />
+
+          {/* Interactive Cover Grid Tiles Overlay (ONLY rendered while unsolved) */}
+          {!isCorrect && (
             <div
-              className="absolute inset-0 grid gap-1 p-2 bg-slate-950/30 backdrop-blur-[1px]"
+              className="absolute inset-0 grid gap-1.5 p-2 bg-slate-950/40 backdrop-blur-[1px]"
               style={{
                 gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))`,
                 gridTemplateRows: `repeat(${gridSize}, minmax(0, 1fr))`
@@ -437,241 +498,250 @@ export const HiddenImageScreen: React.FC<HiddenImageScreenProps> = ({
               {revealedTiles.map((isRevealed, idx) => (
                 <button
                   key={`tile-block-${idx}`}
-                  disabled={isRevealed || isCorrect}
+                  disabled={isRevealed}
                   onClick={() => handleTileClick(idx)}
-                  className={`relative rounded-xl font-black text-xs sm:text-sm flex items-center justify-center transition-all transform duration-300 ${
+                  className={`relative rounded-xl font-black text-sm sm:text-base flex items-center justify-center transition-all transform duration-300 ${
                     isRevealed
                       ? 'opacity-0 scale-75 pointer-events-none'
                       : 'bg-gradient-to-br from-indigo-600 via-indigo-700 to-slate-900 text-indigo-100 border-2 border-indigo-400/30 shadow-md hover:scale-105 active:scale-95 cursor-pointer'
                   }`}
                 >
                   {!isRevealed && (
-                    <span className="opacity-80 group-hover:opacity-100 font-extrabold text-[11px]">
+                    <span className="opacity-80 group-hover:opacity-100 font-black">
                       {idx + 1}
                     </span>
                   )}
                 </button>
               ))}
             </div>
+          )}
 
-            {/* Picture Zoom Icon */}
-            {isCorrect && (
-              <button
-                onClick={() => {
-                  soundFx.playClick();
-                  setShowImageZoom(true);
-                }}
-                className="absolute top-3 right-3 p-2.5 rounded-full bg-slate-900/80 hover:bg-slate-900 text-white backdrop-blur-md opacity-90 transition-opacity"
-                title="Expand Picture"
-              >
-                <Maximize2 className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-
-          {/* Stats Bar under Canvas */}
-          <div className="mt-3 w-full max-w-sm p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2">
-              <Eye className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-              <span className="font-extrabold text-slate-700 dark:text-slate-300">
-                Revealed: <strong className="text-indigo-600 dark:text-indigo-400">{tilesRevealedCount}</strong> / {totalTiles}
-              </span>
+          {/* Solved Badge overlay when picture is completely solved */}
+          {isCorrect && (
+            <div className="absolute top-3 left-3 px-3.5 py-1.5 rounded-full bg-emerald-500 text-white font-black text-xs shadow-lg flex items-center gap-1.5 backdrop-blur-md animate-fade-in">
+              <CheckCircle2 className="w-4 h-4" />
+              <span>SOLVED - FULL PICTURE REVEALED</span>
             </div>
+          )}
 
-            <div className="flex items-center gap-1.5 font-black text-amber-600 dark:text-amber-400">
-              <Sparkles className="w-4 h-4" />
+          {/* Zoom / Fullscreen Button */}
+          <button
+            onClick={() => {
+              soundFx.playClick();
+              setShowImageZoom(true);
+            }}
+            className="absolute top-3 right-3 p-2.5 rounded-full bg-slate-900/80 hover:bg-slate-900 text-white backdrop-blur-md opacity-90 hover:opacity-100 transition-all shadow-md"
+            title="Expand Full Picture"
+          >
+            <Maximize2 className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Quick Action under Image */}
+        {!isCorrect && tilesRemainingCount > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-1 max-w-md sm:max-w-lg mx-auto">
+            <button
+              onClick={handleRevealRandomSquare}
+              className="w-full py-3 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/80 border-2 border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 font-black text-xs flex items-center justify-center gap-2 transition-all active:scale-98 shadow-xs"
+            >
+              <Zap className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              <span>Reveal 1 Random Tile ({tilesRemainingCount} Covered)</span>
+            </button>
+
+            <div className="px-4 py-2.5 rounded-2xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 font-black text-xs flex items-center gap-1.5 whitespace-nowrap">
+              <Sparkles className="w-4 h-4 text-amber-500" />
               <span>Reward: +{potentialReward} 🪙</span>
             </div>
           </div>
+        )}
+      </div>
 
-          {/* Action: Tap 1 Square Quick Button */}
-          {!isCorrect && tilesRemainingCount > 0 && (
-            <button
-              onClick={handleRevealRandomSquare}
-              className="mt-2.5 w-full max-w-sm py-2.5 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 font-black text-xs flex items-center justify-center gap-2 transition-all active:scale-95"
-            >
-              <Zap className="w-4 h-4" />
-              <span>Tap Random Block ({tilesRemainingCount} Covered)</span>
-            </button>
-          )}
+      {/* SECTION 2: NAME THE HIDDEN PICTURE (ANSWER SLOTS) - POSITIONED BELOW HIDDEN PICTURE */}
+      <div className="p-6 rounded-[32px] bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 shadow-md space-y-4 text-center">
+        
+        <div className="flex items-center justify-between text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 px-1">
+          <span className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
+            <Tag className="w-4 h-4" />
+            Name The Hidden Picture
+          </span>
+          <span className="text-[11px] text-slate-400 font-extrabold">
+            {answer.replace(/[^A-Z]/g, '').length} Letters
+          </span>
         </div>
 
-        {/* Right Column: Guessing Word & Letter Bank */}
-        <div className="md:col-span-7 space-y-6">
-          
-          {/* Answer Letter Boxes */}
-          <div className="p-6 rounded-[28px] bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 shadow-xs space-y-3">
-            <span className="text-xs font-black uppercase tracking-wider text-slate-400 block text-center">
-              NAME THE HIDDEN PICTURE
-            </span>
+        {/* Answer Letter Boxes */}
+        <div className="flex flex-wrap items-center justify-center gap-2 py-2">
+          {answer.split('').map((char, index) => {
+            const isLetter = /[A-Z]/.test(char);
+            const val = answerSlots[index] || '';
 
-            <div className="flex flex-wrap items-center justify-center gap-2 py-2">
-              {answer.split('').map((char, index) => {
-                const isLetter = /[A-Z]/.test(char);
-                const val = answerSlots[index] || '';
-
-                if (!isLetter) {
-                  return (
-                    <div key={`space-${index}`} className="w-4 h-12 flex items-center justify-center text-slate-400 font-bold">
-                      {char === ' ' ? '' : char}
-                    </div>
-                  );
-                }
-
-                return (
-                  <button
-                    key={`slot-${index}`}
-                    onClick={() => handleClearSlot(index)}
-                    className={`w-11 h-13 sm:w-12 sm:h-14 rounded-2xl font-black text-xl sm:text-2xl flex items-center justify-center shadow-xs transition-all transform active:scale-95 ${
-                      isCorrect
-                        ? 'bg-emerald-500 text-white border-2 border-emerald-400 shadow-emerald-200'
-                        : val
-                        ? 'bg-indigo-600 text-white border-2 border-indigo-500 shadow-indigo-200'
-                        : 'bg-slate-100 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-transparent'
-                    }`}
-                  >
-                    {val}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Letter Bank Tile Grid */}
-          {!isCorrect && (
-            <div className="p-6 rounded-[28px] bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 shadow-xs space-y-3">
-              <div className="flex items-center justify-between text-xs font-extrabold text-slate-500">
-                <span>AVAILABLE LETTERS</span>
-                <span className="text-slate-400 text-[10px]">TAP TO PLACE</span>
-              </div>
-
-              <div className="flex flex-wrap items-center justify-center gap-2">
-                {letterBank.map((tile) => (
-                  <button
-                    key={tile.id}
-                    disabled={tile.used}
-                    onClick={() => handleSelectBankTile(tile.id, tile.char)}
-                    className={`w-11 h-12 sm:w-12 sm:h-13 rounded-2xl font-black text-lg sm:text-xl transition-all transform active:scale-90 ${
-                      tile.used
-                        ? 'opacity-20 scale-90 bg-slate-100 dark:bg-slate-800 text-slate-400 border border-slate-200 dark:border-slate-700 pointer-events-none'
-                        : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs'
-                    }`}
-                  >
-                    {tile.char}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Hint Banner */}
-          {hintMessage && (
-            <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs font-bold text-center animate-fade-in">
-              💡 {hintMessage}
-            </div>
-          )}
-
-          {/* Hint / Skip Action Bar */}
-          {!isCorrect && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-              <button
-                onClick={handleHintRevealLetter}
-                className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 hover:border-amber-300 text-amber-700 dark:text-amber-300 font-extrabold text-xs flex flex-col items-center justify-center gap-1 transition-all"
-              >
-                <Lightbulb className="w-4 h-4 text-amber-500" />
-                <span>Reveal Letter</span>
-                <span className="text-[10px] text-amber-600 font-bold">15 🪙</span>
-              </button>
-
-              <button
-                onClick={handleRandomQuestion}
-                className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 hover:border-indigo-300 text-slate-700 dark:text-slate-300 font-extrabold text-xs flex flex-col items-center justify-center gap-1 transition-all"
-              >
-                <Shuffle className="w-4 h-4 text-indigo-500" />
-                <span>Shuffle Picture</span>
-                <span className="text-[10px] text-slate-400 font-bold">Free</span>
-              </button>
-
-              <button
-                onClick={handleNextQuestion}
-                className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 hover:border-slate-300 text-slate-500 font-extrabold text-xs flex flex-col items-center justify-center gap-1 transition-all col-span-2 sm:col-span-1"
-              >
-                <ArrowLeft className="w-4 h-4 text-slate-400 rotate-180" />
-                <span>Skip Picture</span>
-                <span className="text-[10px] text-slate-400 font-bold">Free</span>
-              </button>
-            </div>
-          )}
-
-          {/* Correct Answer Celebration Card */}
-          {isCorrect && (
-            <div className="p-6 sm:p-8 rounded-[32px] bg-emerald-50 dark:bg-emerald-950/60 border-2 border-emerald-300 dark:border-emerald-800 shadow-xs space-y-4 text-center animate-in zoom-in-95 duration-200">
-              <div className="inline-flex p-3.5 rounded-full bg-emerald-500 text-white shadow-md">
-                <CheckCircle2 className="w-8 h-8" />
-              </div>
-
-              <div>
-                <h3 className="font-black text-2xl text-emerald-900 dark:text-emerald-100 tracking-tight uppercase">
-                  PUZZLE SOLVED!
-                </h3>
-                <p className="font-black text-emerald-700 dark:text-emerald-300 text-xl tracking-wider mt-1">
-                  {currentQuestion.correctAnswer}
-                </p>
-              </div>
-
-              {/* Reward Breakdown */}
-              <div className="grid grid-cols-2 gap-3 p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-800 text-xs font-bold">
-                <div className="text-center">
-                  <span className="text-slate-500 text-[11px] block">Coins Earned</span>
-                  <span className="text-amber-600 dark:text-amber-400 text-lg font-black">+{coinsEarned} 🪙</span>
+            if (!isLetter) {
+              return (
+                <div key={`space-${index}`} className="w-4 h-12 flex items-center justify-center text-slate-400 font-black">
+                  {char === ' ' ? '' : char}
                 </div>
-                <div className="text-center">
-                  <span className="text-slate-500 text-[11px] block">Tiles Uncovered</span>
-                  <span className="text-indigo-600 dark:text-indigo-400 text-lg font-black">{tilesRevealedCount} / {totalTiles}</span>
-                </div>
-              </div>
+              );
+            }
 
-              {/* Trivia Fact */}
-              <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-800 text-left text-slate-700 dark:text-slate-200 text-sm space-y-1">
-                <div className="flex items-center gap-2 font-black text-emerald-600 dark:text-emerald-400 text-xs uppercase tracking-wider">
-                  <Sparkles className="w-4 h-4" />
-                  Trivia Fact
-                </div>
-                <p className="leading-relaxed text-slate-600 dark:text-slate-300 font-medium text-xs">
-                  {currentQuestion.triviaFact}
-                </p>
-              </div>
-
+            return (
               <button
-                onClick={() => {
-                  soundFx.playClick();
-                  handleNextQuestion();
-                }}
-                className="w-full py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-base shadow-lg shadow-indigo-200 dark:shadow-none transition-all transform active:scale-98"
+                key={`slot-${index}`}
+                disabled={isCorrect}
+                onClick={() => handleClearSlot(index)}
+                className={`w-11 h-13 sm:w-13 sm:h-15 rounded-2xl font-black text-xl sm:text-2xl flex items-center justify-center shadow-xs transition-all transform active:scale-95 ${
+                  isCorrect
+                    ? 'bg-emerald-500 text-white border-2 border-emerald-400 shadow-emerald-200'
+                    : val
+                    ? 'bg-indigo-600 text-white border-2 border-indigo-500 shadow-indigo-200'
+                    : 'bg-slate-100 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-transparent hover:border-indigo-400'
+                }`}
               >
-                NEXT HIDDEN PICTURE →
+                {val}
               </button>
-            </div>
-          )}
-
+            );
+          })}
         </div>
       </div>
 
-      {/* Expanded Picture Modal */}
+      {/* SECTION 3: AVAILABLE LETTERS (LETTER BANK) - POSITIONED BELOW ANSWER SLOTS */}
+      {!isCorrect && (
+        <div className="p-6 rounded-[32px] bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 shadow-md space-y-4 text-center">
+          <div className="flex items-center justify-between text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 px-1">
+            <span className="text-indigo-600 dark:text-indigo-400 font-black">
+              Available Letters
+            </span>
+            <span className="text-slate-400 text-[10px] font-bold">TAP LETTER TO PLACE</span>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {letterBank.map((tile) => (
+              <button
+                key={tile.id}
+                disabled={tile.used}
+                onClick={() => handleSelectBankTile(tile.id, tile.char)}
+                className={`w-11 h-12 sm:w-13 sm:h-14 rounded-2xl font-black text-lg sm:text-2xl transition-all transform active:scale-90 ${
+                  tile.used
+                    ? 'opacity-20 scale-90 bg-slate-100 dark:bg-slate-800 text-slate-400 border border-slate-200 dark:border-slate-700 pointer-events-none'
+                    : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md hover:scale-105'
+                }`}
+              >
+                {tile.char}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Hint Alert Message */}
+      {hintMessage && (
+        <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs font-bold text-center animate-fade-in">
+          💡 {hintMessage}
+        </div>
+      )}
+
+      {/* SECTION 4: HINT & NAVIGATION ACTIONS */}
+      {!isCorrect && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <button
+            onClick={handleHintRevealLetter}
+            className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 hover:border-amber-300 text-amber-700 dark:text-amber-300 font-extrabold text-xs flex flex-col items-center justify-center gap-1 transition-all shadow-xs"
+          >
+            <Lightbulb className="w-5 h-5 text-amber-500" />
+            <span>Reveal Letter</span>
+            <span className="text-[10px] text-amber-600 font-black">15 🪙</span>
+          </button>
+
+          <button
+            onClick={handleRandomQuestion}
+            className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 hover:border-indigo-300 text-slate-700 dark:text-slate-300 font-extrabold text-xs flex flex-col items-center justify-center gap-1 transition-all shadow-xs"
+          >
+            <Shuffle className="w-5 h-5 text-indigo-500" />
+            <span>Shuffle Picture</span>
+            <span className="text-[10px] text-slate-400 font-black">Free</span>
+          </button>
+
+          <button
+            onClick={handleNextQuestion}
+            className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 hover:border-slate-300 text-slate-500 font-extrabold text-xs flex flex-col items-center justify-center gap-1 transition-all shadow-xs col-span-2 sm:col-span-1"
+          >
+            <ArrowLeft className="w-5 h-5 text-slate-400 rotate-180" />
+            <span>Skip Picture</span>
+            <span className="text-[10px] text-slate-400 font-black">Free</span>
+          </button>
+        </div>
+      )}
+
+      {/* SECTION 5: CORRECT ANSWER CELEBRATION CARD */}
+      {isCorrect && (
+        <div className="p-6 sm:p-8 rounded-[36px] bg-emerald-50 dark:bg-emerald-950/60 border-2 border-emerald-300 dark:border-emerald-800 shadow-xl space-y-5 text-center animate-in zoom-in-95 duration-200">
+          <div className="inline-flex p-4 rounded-full bg-emerald-500 text-white shadow-lg">
+            <CheckCircle2 className="w-10 h-10" />
+          </div>
+
+          <div>
+            <h3 className="font-black text-2xl sm:text-3xl text-emerald-900 dark:text-emerald-100 tracking-tight uppercase">
+              PUZZLE SOLVED!
+            </h3>
+            <p className="font-black text-emerald-700 dark:text-emerald-300 text-2xl tracking-wider mt-1">
+              {currentQuestion.correctAnswer}
+            </p>
+          </div>
+
+          {/* Reward Metrics */}
+          <div className="grid grid-cols-2 gap-3 p-4 rounded-2xl bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-800 text-xs font-bold">
+            <div className="text-center">
+              <span className="text-slate-500 text-[11px] block">Coins Earned</span>
+              <span className="text-amber-600 dark:text-amber-400 text-xl font-black">+{coinsEarned} 🪙</span>
+            </div>
+            <div className="text-center">
+              <span className="text-slate-500 text-[11px] block">Tiles Uncovered</span>
+              <span className="text-indigo-600 dark:text-indigo-400 text-xl font-black">{tilesRevealedCount} / {totalTiles}</span>
+            </div>
+          </div>
+
+          {/* Trivia Fact */}
+          {currentQuestion.triviaFact && (
+            <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-800 text-left text-slate-700 dark:text-slate-200 text-sm space-y-1">
+              <div className="flex items-center gap-2 font-black text-emerald-600 dark:text-emerald-400 text-xs uppercase tracking-wider">
+                <Sparkles className="w-4 h-4" />
+                Trivia Fact
+              </div>
+              <p className="leading-relaxed text-slate-600 dark:text-slate-300 font-medium text-xs">
+                {currentQuestion.triviaFact}
+              </p>
+            </div>
+          )}
+
+          <button
+            onClick={() => {
+              soundFx.playClick();
+              handleNextQuestion();
+            }}
+            className="w-full py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-base shadow-lg shadow-indigo-200 dark:shadow-none transition-all transform active:scale-98"
+          >
+            NEXT HIDDEN PICTURE →
+          </button>
+        </div>
+      )}
+
+      {/* Expanded Zoom Picture Modal */}
       {showImageZoom && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
-          <div className="relative max-w-3xl w-full max-h-[90vh] bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden p-2">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md animate-fade-in">
+          <div className="relative max-w-3xl w-full max-h-[90vh] bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden p-3 shadow-2xl flex flex-col items-center">
             <img
               src={currentQuestion.image}
               alt="Expanded Clue"
-              className="w-full h-auto max-h-[80vh] object-contain rounded-2xl"
+              className="w-full h-auto max-h-[75vh] object-contain rounded-2xl"
             />
-            <button
-              onClick={() => setShowImageZoom(false)}
-              className="absolute top-4 right-4 px-4 py-2 rounded-2xl bg-slate-950/80 text-white font-black text-xs"
-            >
-              Close
-            </button>
+            <div className="w-full mt-3 flex items-center justify-between text-xs text-slate-300 font-bold px-2">
+              <span>{isCorrect ? currentQuestion.correctAnswer : 'Hidden Clue Zoom'}</span>
+              <button
+                onClick={() => setShowImageZoom(false)}
+                className="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-black text-xs"
+              >
+                Close Zoom
+              </button>
+            </div>
           </div>
         </div>
       )}

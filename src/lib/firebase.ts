@@ -134,12 +134,13 @@ export async function loginMasterAdminWithGoogle(): Promise<{
   } catch (err: any) {
     console.error('Master Admin Google Auth error:', err);
     
-    if (err?.code === 'auth/unauthorized-domain') {
-      const currentHost = typeof window !== 'undefined' ? window.location.hostname : 'this domain';
+    const errString = String(err?.message || err || '');
+    if (err?.code === 'auth/unauthorized-domain' || errString.includes('unauthorized-domain') || errString.includes('unauthorized domain')) {
+      const currentHost = typeof window !== 'undefined' ? window.location.hostname : '100-pics-quiz-master.vercel.app';
       return {
         success: false,
         isUnauthorizedDomain: true,
-        message: `Firebase Auth domain restriction: "${currentHost}" is not listed in your Firebase project's Authorized Domains list. To use Google Popup Login, add "${currentHost}" in Firebase Console > Authentication > Settings > Authorized Domains. Alternatively, use Direct Authorized Email Verification below.`
+        message: `Firebase Auth Domain Restriction: "${currentHost}" is not listed in your Firebase project's Authorized Domains. To enable Google Popup Login on Vercel/custom hostings, add "${currentHost}" in Firebase Console > Authentication > Settings > Authorized Domains. You can sign in immediately using Direct Authorized Email Verification below!`
       };
     }
 
