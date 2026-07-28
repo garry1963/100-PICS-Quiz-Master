@@ -22,27 +22,9 @@ import { SearchModal } from './components/SearchModal';
 import { HiddenImageScreen } from './components/HiddenImageScreen';
 import { LeaderboardScreen } from './components/LeaderboardScreen';
 
-export function App() {
-  // Helper to get default clean guest player profile
-  const getDefaultGuestPlayer = (): UserProfile => {
-    return {
-      id: 'guest-player',
-      username: 'Guest Player',
-      email: 'guest@100pics.app',
-      role: 'player',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=250',
-      coins: 0,
-      xp: 0,
-      level: 1,
-      title: 'Guest',
-      currentStreak: 0,
-      longestStreak: 0,
-      lastLoginDate: new Date().toISOString().split('T')[0],
-      createdAt: new Date().toISOString(),
-      approvalStatus: 'approved'
-    };
-  };
+import { UNAUTHENTICATED_GUEST } from './lib/seedData';
 
+export function App() {
   // Security & Authentication verification state
   // Signed in with 4-digit PIN / Admin authorization per active browser session
   const [isPinVerified, setIsPinVerified] = useState<boolean>(() => {
@@ -56,16 +38,15 @@ export function App() {
     const activeSession = sessionStorage.getItem('active_session_auth');
     if (activeSession === 'true') {
       const cur = dbStore.getCurrentUser();
-      if (cur.username === 'PlayerOne' || cur.id === 'player-1' || cur.id === 'player-guest-101') {
-        return getDefaultGuestPlayer();
+      if (cur.role === 'guest' || cur.id === 'guest-player' || cur.id === 'guest-user' || cur.username === 'Guest Player' || cur.username === 'Guest') {
+        return UNAUTHENTICATED_GUEST;
       }
       return cur;
     } else {
       // Auto sign-out on app launch / closed & restarted
-      const guestPlayer = getDefaultGuestPlayer();
-      dbStore.setCurrentUser(guestPlayer);
+      dbStore.setCurrentUser(UNAUTHENTICATED_GUEST);
       signOutAdmin().catch(() => {});
-      return guestPlayer;
+      return UNAUTHENTICATED_GUEST;
     }
   });
 
@@ -79,9 +60,8 @@ export function App() {
     const activeSession = sessionStorage.getItem('active_session_auth');
     if (activeSession !== 'true') {
       setIsPinVerified(false);
-      const guestPlayer = getDefaultGuestPlayer();
-      setUser(guestPlayer);
-      dbStore.setCurrentUser(guestPlayer);
+      setUser(UNAUTHENTICATED_GUEST);
+      dbStore.setCurrentUser(UNAUTHENTICATED_GUEST);
       signOutAdmin().catch(() => {});
     }
   }, []);
@@ -101,10 +81,8 @@ export function App() {
     } catch (e) {
       console.warn('Sign out error:', e);
     }
-    const defaultPlayer = getDefaultGuestPlayer();
-    setUser(defaultPlayer);
-    dbStore.saveUser(defaultPlayer);
-    dbStore.setCurrentUser(defaultPlayer);
+    setUser(UNAUTHENTICATED_GUEST);
+    dbStore.setCurrentUser(UNAUTHENTICATED_GUEST);
     setIsPinVerified(false);
     setActiveTab('home');
     setAuthNoticeMessage('You have signed out. Please sign in with your PIN or Master Admin credentials.');

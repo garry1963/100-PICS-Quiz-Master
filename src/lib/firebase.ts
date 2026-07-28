@@ -536,8 +536,12 @@ export async function purgeSampleDataFromFirestore(): Promise<void> {
 
     await deleteDoc(doc(db, 'users', 'player-guest-101'));
     await deleteDoc(doc(db, 'users', 'player-1'));
+    await deleteDoc(doc(db, 'users', 'guest-player'));
+    await deleteDoc(doc(db, 'users', 'guest-user'));
     await deleteDoc(doc(db, 'approvedUsers', 'player-guest-101'));
     await deleteDoc(doc(db, 'approvedUsers', 'player-1'));
+    await deleteDoc(doc(db, 'approvedUsers', 'guest-player'));
+    await deleteDoc(doc(db, 'approvedUsers', 'guest-user'));
   } catch (err) {
     console.warn('Purge sample data from Firestore error:', err);
   }

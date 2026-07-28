@@ -17,22 +17,24 @@ export const DEFAULT_MASTER_ADMIN: UserProfile = {
   approvalStatus: 'approved'
 };
 
-export const DEFAULT_PLAYER: UserProfile = {
-  id: 'master-admin-001',
-  username: 'MasterAdmin',
-  email: 'garrydavies1963@gmail.com',
-  role: 'admin',
-  avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80',
+export const UNAUTHENTICATED_GUEST: UserProfile = {
+  id: 'guest-user',
+  username: 'Guest',
+  email: '',
+  role: 'guest',
+  avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=250&q=80',
   coins: 0,
   xp: 0,
   level: 1,
-  title: 'Master Administrator',
+  title: 'Guest',
   currentStreak: 0,
   longestStreak: 0,
   lastLoginDate: new Date().toISOString().split('T')[0],
   createdAt: new Date().toISOString(),
-  approvalStatus: 'approved'
+  approvalStatus: 'none'
 };
+
+export const DEFAULT_PLAYER: UserProfile = DEFAULT_MASTER_ADMIN;
 
 export const INITIAL_CATEGORIES: QuizCategory[] = [];
 

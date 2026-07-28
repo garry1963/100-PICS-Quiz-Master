@@ -1,5 +1,5 @@
-export type UserRole = 'admin' | 'player';
-export type AccountStatus = 'pending' | 'approved' | 'rejected';
+export type UserRole = 'admin' | 'player' | 'guest';
+export type AccountStatus = 'pending' | 'approved' | 'rejected' | 'none';
 
 export type DifficultyLevel = 'Easy' | 'Medium' | 'Hard' | 'Expert' | 'Master';
 

@@ -18,7 +18,8 @@ import {
   INITIAL_QUESTIONS,
   INITIAL_ACHIEVEMENTS,
   DEFAULT_MASTER_ADMIN,
-  DEFAULT_PLAYER
+  DEFAULT_PLAYER,
+  UNAUTHENTICATED_GUEST
 } from './seedData';
 import {
   saveCategoryToFirestore,
@@ -96,15 +97,17 @@ class LocalStorageEngine {
     );
     this.setItem(KEYS.QUESTIONS, cleanQuestions);
 
-    const cleanUsers = this.getAllUsers().filter(u => u.id !== 'player-guest-101' && u.id !== 'player-1' && u.username !== 'PlayerOne');
+    const cleanUsers = this.getAllUsers().filter(
+      u => u.id !== 'player-guest-101' && u.id !== 'player-1' && u.id !== 'guest-player' && u.id !== 'guest-user' && u.username !== 'PlayerOne' && u.username !== 'Guest Player' && u.username !== 'Guest' && u.role !== 'guest'
+    );
     if (cleanUsers.length === 0) {
       cleanUsers.push(DEFAULT_MASTER_ADMIN);
     }
     this.setItem(KEYS.USERS, cleanUsers);
 
     const curr = this.getCurrentUser();
-    if (curr.id === 'player-guest-101' || curr.id === 'player-1' || curr.username === 'PlayerOne') {
-      this.setItem(KEYS.CURRENT_USER, DEFAULT_MASTER_ADMIN);
+    if (curr.id === 'player-guest-101' || curr.id === 'player-1' || curr.id === 'guest-player' || curr.id === 'guest-user' || curr.username === 'PlayerOne' || curr.username === 'Guest Player' || curr.role === 'guest') {
+      this.setItem(KEYS.CURRENT_USER, UNAUTHENTICATED_GUEST);
     }
 
     purgeSampleDataFromFirestore().catch(() => {});
@@ -193,24 +196,36 @@ class LocalStorageEngine {
 
   // --- USER AUTH & PROFILES ---
   public getCurrentUser(): UserProfile {
-    return this.getItem<UserProfile>(KEYS.CURRENT_USER, DEFAULT_MASTER_ADMIN);
+    return this.getItem<UserProfile>(KEYS.CURRENT_USER, UNAUTHENTICATED_GUEST);
   }
 
   public setCurrentUser(user: UserProfile) {
     this.setItem(KEYS.CURRENT_USER, user);
-    this.updateUserInList(user);
-    saveUserToFirestore(user).catch(() => {});
+    if (user.role !== 'guest' && user.id !== 'guest-user' && user.id !== 'guest-player' && user.username !== 'Guest' && user.username !== 'Guest Player') {
+      this.updateUserInList(user);
+      saveUserToFirestore(user).catch(() => {});
+    }
   }
 
   public getAllUsers(): UserProfile[] {
     return this.getItem<UserProfile[]>(KEYS.USERS, [DEFAULT_MASTER_ADMIN]).filter(
-      u => u.username !== 'PlayerOne' && u.id !== 'player-1' && u.id !== 'player-guest-101'
+      u => u.username !== 'PlayerOne' &&
+           u.username !== 'Guest Player' &&
+           u.username !== 'Guest' &&
+           u.id !== 'player-1' &&
+           u.id !== 'guest-player' &&
+           u.id !== 'guest-user' &&
+           u.id !== 'player-guest-101' &&
+           u.role !== 'guest'
     );
   }
 
   public saveUser(user: UserProfile) {
+    if (user.role === 'guest' || user.id === 'guest-user' || user.id === 'guest-player' || user.username === 'Guest Player' || user.username === 'Guest') {
+      return;
+    }
     const users = this.getAllUsers();
-    const idx = users.findIndex(u => u.id === user.id || u.email.toLowerCase() === user.email.toLowerCase());
+    const idx = users.findIndex(u => u.id === user.id || (u.email && u.email.toLowerCase() === user.email.toLowerCase()));
     if (idx >= 0) {
       users[idx] = user;
     } else {
@@ -224,6 +239,9 @@ class LocalStorageEngine {
   }
 
   public updateUserInList(user: UserProfile) {
+    if (user.role === 'guest' || user.id === 'guest-user' || user.id === 'guest-player' || user.username === 'Guest Player' || user.username === 'Guest') {
+      return;
+    }
     const users = this.getAllUsers();
     const idx = users.findIndex(u => u.id === user.id);
     if (idx >= 0) {

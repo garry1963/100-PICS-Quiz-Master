@@ -54,8 +54,17 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
   useEffect(() => {
     if (isOpen && mode === 'player') {
+      const activeSession = sessionStorage.getItem('active_session_auth');
       const cur = dbStore.getCurrentUser();
-      if (cur && cur.role === 'player') {
+      const isRealPlayer = cur &&
+        cur.role === 'player' &&
+        cur.id !== 'guest' &&
+        cur.id !== 'guest-user' &&
+        cur.id !== 'guest-player' &&
+        cur.username !== 'Guest' &&
+        cur.username !== 'Guest Player';
+
+      if (activeSession === 'true' && isRealPlayer) {
         setTargetUser(cur);
         if (cur.approvalStatus === 'pending') {
           setPlayerStep('pending_notice');
@@ -68,6 +77,9 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             setPlayerStep('pin_verify');
           }
         }
+      } else {
+        setPlayerStep('login');
+        setTargetUser(null);
       }
     }
   }, [isOpen, mode]);
