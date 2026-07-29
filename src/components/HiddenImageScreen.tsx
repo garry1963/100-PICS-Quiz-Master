@@ -81,15 +81,23 @@ export const HiddenImageScreen: React.FC<HiddenImageScreenProps> = ({
   useEffect(() => {
     if (!currentQuestion) return;
 
-    setRevealedTiles(new Array(gridSize * gridSize).fill(false));
-    setIsCorrect(false);
+    const answerStr = currentQuestion.correctAnswer.toUpperCase();
+    const savedState = dbStore.getQuestionAnswerState(currentQuestion.id);
+    const wasGuessed = savedState?.guessedCorrectly;
+
+    if (wasGuessed) {
+      setIsCorrect(true);
+      setRevealedTiles(new Array(gridSize * gridSize).fill(true));
+      setAnswerSlots(answerStr.split('').map(ch => (/[A-Z]/.test(ch) ? ch : '')));
+    } else {
+      setIsCorrect(false);
+      setRevealedTiles(new Array(gridSize * gridSize).fill(false));
+      setAnswerSlots(new Array(answerStr.length).fill(''));
+    }
+
     setHintMessage(null);
 
-    const answer = currentQuestion.correctAnswer.toUpperCase();
-    const lettersOnly = answer.replace(/[^A-Z]/g, '');
-
-    // Answer slots matching total length
-    setAnswerSlots(new Array(answer.length).fill(''));
+    const lettersOnly = answerStr.replace(/[^A-Z]/g, '');
 
     // Generate scrambled letter bank (correct letters + distractors)
     const distractors = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -111,7 +119,7 @@ export const HiddenImageScreen: React.FC<HiddenImageScreenProps> = ({
       bankChars.map((char, index) => ({
         id: `tile-${index}-${char}`,
         char,
-        used: false
+        used: wasGuessed ? lettersOnly.includes(char) : false
       }))
     );
   }, [currentQuestionIndex, selectedPackId, gridSize, currentQuestion]);
@@ -218,6 +226,33 @@ export const HiddenImageScreen: React.FC<HiddenImageScreenProps> = ({
       return prev;
     });
   };
+
+  // Keyboard support for desktop / physical typing
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (isCorrect || !currentQuestion) return;
+
+      const key = e.key.toUpperCase();
+
+      if (/[A-Z]/.test(key) && key.length === 1) {
+        const availableTile = letterBank.find((t) => t.char === key && !t.used);
+        if (availableTile) {
+          handleSelectBankTile(availableTile.id, availableTile.char);
+        }
+      } else if (e.key === 'Backspace') {
+        const ans = currentQuestion.correctAnswer.toUpperCase();
+        for (let i = answerSlots.length - 1; i >= 0; i--) {
+          if (/[A-Z]/.test(ans[i]) && answerSlots[i] !== '') {
+            handleClearSlot(i);
+            break;
+          }
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [letterBank, answerSlots, isCorrect, currentQuestion]);
 
   // Answer validation logic
   const checkAnswerCompletion = (currentSlots: string[]) => {
@@ -486,35 +521,38 @@ export const HiddenImageScreen: React.FC<HiddenImageScreenProps> = ({
             className="w-full h-full object-cover rounded-[24px]"
           />
 
-          {/* Interactive Cover Grid Tiles Overlay (ONLY rendered while unsolved) */}
-          {!isCorrect && (
-            <div
-              className="absolute inset-0 grid gap-1.5 p-2 bg-slate-950/40 backdrop-blur-[1px]"
-              style={{
-                gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))`,
-                gridTemplateRows: `repeat(${gridSize}, minmax(0, 1fr))`
-              }}
-            >
-              {revealedTiles.map((isRevealed, idx) => (
+          {/* Interactive Cover Grid Tiles Overlay */}
+          <div
+            className={`absolute inset-0 grid gap-1.5 p-2 bg-slate-950/40 backdrop-blur-[1px] transition-all duration-700 ${
+              isCorrect ? 'pointer-events-none opacity-0' : 'opacity-100'
+            }`}
+            style={{
+              gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))`,
+              gridTemplateRows: `repeat(${gridSize}, minmax(0, 1fr))`
+            }}
+          >
+            {revealedTiles.map((isRevealed, idx) => {
+              const isTileOpen = isRevealed || isCorrect;
+              return (
                 <button
                   key={`tile-block-${idx}`}
-                  disabled={isRevealed}
+                  disabled={isTileOpen}
                   onClick={() => handleTileClick(idx)}
-                  className={`relative rounded-xl font-black text-sm sm:text-base flex items-center justify-center transition-all transform duration-300 ${
-                    isRevealed
-                      ? 'opacity-0 scale-75 pointer-events-none'
+                  className={`relative rounded-xl font-black text-sm sm:text-base flex items-center justify-center transition-all transform duration-500 ${
+                    isTileOpen
+                      ? 'opacity-0 scale-50 -rotate-6 pointer-events-none'
                       : 'bg-gradient-to-br from-indigo-600 via-indigo-700 to-slate-900 text-indigo-100 border-2 border-indigo-400/30 shadow-md hover:scale-105 active:scale-95 cursor-pointer'
                   }`}
                 >
-                  {!isRevealed && (
+                  {!isTileOpen && (
                     <span className="opacity-80 group-hover:opacity-100 font-black">
                       {idx + 1}
                     </span>
                   )}
                 </button>
-              ))}
-            </div>
-          )}
+              );
+            })}
+          </div>
 
           {/* Solved Badge overlay when picture is completely solved */}
           {isCorrect && (
