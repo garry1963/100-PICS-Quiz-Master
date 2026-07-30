@@ -157,6 +157,18 @@ const STREAK_REWARDS = [
   { day: 7, coins: 750, xp: 1000, label: 'Day 7 Grand Prize', special: true }
 ];
 
+const renderIcon = (name: string, className: string) => {
+  switch (name) {
+    case 'Flame': return <Flame className={className} />;
+    case 'Trophy': return <Trophy className={className} />;
+    case 'Target': return <Target className={className} />;
+    case 'Zap': return <Zap className={className} />;
+    case 'EyeOff': return <EyeOff className={className} />;
+    case 'Star': return <Star className={className} />;
+    default: return <Gift className={className} />;
+  }
+};
+
 export const ChallengesScreen: React.FC<ChallengesScreenProps> = ({
   user,
   onUpdateUser,
@@ -270,18 +282,6 @@ export const ChallengesScreen: React.FC<ChallengesScreenProps> = ({
     });
 
     triggerRewardToast(`Day ${currentDayReward.day} Streak Bonus Claimed!`, currentDayReward.coins, currentDayReward.xp);
-  };
-
-  const renderIcon = (name: string, className: string) => {
-    switch (name) {
-      case 'Flame': return <Flame className={className} />;
-      case 'Trophy': return <Trophy className={className} />;
-      case 'Target': return <Target className={className} />;
-      case 'Zap': return <Zap className={className} />;
-      case 'EyeOff': return <EyeOff className={className} />;
-      case 'Star': return <Star className={className} />;
-      default: return <Gift className={className} />;
-    }
   };
 
   return (
