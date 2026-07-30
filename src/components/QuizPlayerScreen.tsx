@@ -523,11 +523,9 @@ export const QuizPlayerScreen: React.FC<QuizPlayerScreenProps> = ({
               </div>
 
               <div className="flex flex-wrap items-center justify-center gap-2">
-                {letterBank.map(tile => {
-                  const isRemoved = removedDistractors.includes(tile.id);
-                  if (isRemoved) return null;
-
-                  return (
+                {letterBank
+                  .filter(tile => !removedDistractors.includes(tile.id))
+                  .map(tile => (
                     <button
                       key={tile.id}
                       disabled={tile.used}
@@ -540,8 +538,7 @@ export const QuizPlayerScreen: React.FC<QuizPlayerScreenProps> = ({
                     >
                       {tile.char}
                     </button>
-                  );
-                })}
+                  ))}
               </div>
             </div>
           )}

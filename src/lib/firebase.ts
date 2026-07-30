@@ -219,7 +219,7 @@ export async function fetchCategoriesFromFirestore(): Promise<QuizCategory[]> {
 /** Save a category to Firestore */
 export async function saveCategoryToFirestore(category: QuizCategory): Promise<void> {
   try {
-    await setDoc(doc(db, 'categories', category.id), category, { merge: true });
+    await setDoc(doc(db, 'categories', category.id), cleanForFirestore(category), { merge: true });
   } catch (err) {
     console.warn('Firestore saveCategory error:', err);
   }
@@ -251,7 +251,7 @@ export async function fetchPacksFromFirestore(): Promise<QuizPack[]> {
 /** Save a quiz pack to Firestore */
 export async function savePackToFirestore(pack: QuizPack): Promise<void> {
   try {
-    await setDoc(doc(db, 'quizPacks', pack.id), pack, { merge: true });
+    await setDoc(doc(db, 'quizPacks', pack.id), cleanForFirestore(pack), { merge: true });
   } catch (err) {
     console.warn('Firestore savePack error:', err);
   }
@@ -282,7 +282,7 @@ export async function fetchQuestionsFromFirestore(): Promise<Question[]> {
 /** Save a question to Firestore */
 export async function saveQuestionToFirestore(question: Question): Promise<void> {
   try {
-    await setDoc(doc(db, 'questions', question.id), question, { merge: true });
+    await setDoc(doc(db, 'questions', question.id), cleanForFirestore(question), { merge: true });
   } catch (err) {
     console.warn('Firestore saveQuestion error:', err);
   }
@@ -300,9 +300,9 @@ export async function deleteQuestionFromFirestore(questionId: string): Promise<v
 /** Save player user profile to Firestore */
 export async function saveUserToFirestore(user: UserProfile): Promise<void> {
   try {
-    await setDoc(doc(db, 'users', user.id), user, { merge: true });
+    await setDoc(doc(db, 'users', user.id), cleanForFirestore(user), { merge: true });
     if (user.approvalStatus === 'approved') {
-      await setDoc(doc(db, 'approvedUsers', user.id), user, { merge: true });
+      await setDoc(doc(db, 'approvedUsers', user.id), cleanForFirestore(user), { merge: true });
     }
   } catch (err) {
     console.warn('Firestore saveUser error:', err);
@@ -462,10 +462,20 @@ export async function fetchUserProgressFromFirestore(userId: string): Promise<Re
   }
 }
 
+/** Helper to strip undefined values so Firestore setDoc never throws Unsupported field value: undefined */
+function cleanForFirestore<T>(data: T): any {
+  if (data === null || data === undefined) return {};
+  return JSON.parse(JSON.stringify(data, (key, value) => (value === undefined ? null : value)));
+}
+
 /** Add a system audit log to Firestore */
 export async function addLogToFirestore(log: SystemLog): Promise<void> {
   try {
-    await setDoc(doc(db, 'systemLogs', log.id), log, { merge: true });
+    const cleanLog = {
+      ...log,
+      user: log.user || 'System'
+    };
+    await setDoc(doc(db, 'systemLogs', log.id), cleanForFirestore(cleanLog), { merge: true });
   } catch (err) {
     console.warn('Firestore addLog error:', err);
   }

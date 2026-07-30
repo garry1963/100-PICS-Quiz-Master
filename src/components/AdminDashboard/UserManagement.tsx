@@ -232,8 +232,8 @@ export const UserManagement: React.FC = () => {
                 </td>
               </tr>
             ) : (
-              displayedUsers.map(u => (
-                <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+              displayedUsers.map((u, idx) => (
+                <tr key={`${u.id}-${idx}`} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                   <td className="p-3.5">
                     <div className="flex items-center gap-3">
                       <img src={u.avatar} alt={u.username} className="w-9 h-9 rounded-full object-cover border border-slate-200 dark:border-slate-700" />

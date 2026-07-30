@@ -57,24 +57,48 @@ const KEYS = {
 };
 
 class LocalStorageEngine {
+  private inMemoryCache: Map<string, any> = new Map();
+
   constructor() {
     this.ensureInitialized();
   }
 
   private getItem<T>(key: string, defaultValue: T): T {
+    if (this.inMemoryCache.has(key)) {
+      return this.inMemoryCache.get(key) as T;
+    }
     try {
       const data = localStorage.getItem(key);
-      return data ? (JSON.parse(data) as T) : defaultValue;
+      if (data) {
+        const parsed = JSON.parse(data) as T;
+        this.inMemoryCache.set(key, parsed);
+        return parsed;
+      }
     } catch {
-      return defaultValue;
+      // fallback
     }
+    return defaultValue;
   }
 
   private setItem<T>(key: string, value: T): void {
+    this.inMemoryCache.set(key, value);
     try {
       localStorage.setItem(key, JSON.stringify(value));
-    } catch (err) {
-      console.warn('LocalStorage save failed:', err);
+    } catch {
+      // If localStorage quota is exceeded (e.g. heavy image data), trim data URLs for persistence fallback
+      if (key === KEYS.QUESTIONS && Array.isArray(value)) {
+        try {
+          const trimmed = value.map((q: any) => {
+            if (q && typeof q.image === 'string' && q.image.startsWith('data:') && q.image.length > 500) {
+              return { ...q, image: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=800&q=80' };
+            }
+            return q;
+          });
+          localStorage.setItem(key, JSON.stringify(trimmed));
+        } catch {
+          // In-memory cache & Firestore retain full image data safely
+        }
+      }
     }
   }
 
@@ -607,13 +631,15 @@ class LocalStorageEngine {
 
   public addLog(level: SystemLog['level'], category: SystemLog['category'], message: string, user?: string) {
     const logs = this.getLogs();
+    const currentUser = this.getCurrentUser();
+    const resolvedUser = user || currentUser?.username || 'Master Admin';
     const newLog: SystemLog = {
       id: `log-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       timestamp: new Date().toISOString(),
       level,
       category,
       message,
-      user
+      user: resolvedUser
     };
     logs.unshift(newLog);
     // Keep last 100 logs
