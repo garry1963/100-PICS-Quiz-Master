@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FolderPlus, Plus, Trash2, Edit3, Copy, Save, X, Sparkles, Check, Image as ImageIcon } from 'lucide-react';
 import { QuizPack, DifficultyLevel } from '../../types';
 import { dbStore } from '../../lib/storage';
@@ -14,6 +14,13 @@ export const QuizPackEditor: React.FC<QuizPackEditorProps> = ({ onManageQuestion
   const [isNew, setIsNew] = useState(false);
 
   const categories = dbStore.getCategories();
+
+  useEffect(() => {
+    const unsub = dbStore.subscribe(() => {
+      setPacks(dbStore.getPacks());
+    });
+    return () => unsub();
+  }, []);
 
   const reloadPacks = () => {
     setPacks(dbStore.getPacks());
@@ -205,7 +212,14 @@ export const QuizPackEditor: React.FC<QuizPackEditorProps> = ({ onManageQuestion
         {packs.map(p => (
           <div key={p.id} className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700 flex flex-col justify-between gap-3">
             <div className="flex gap-3">
-              <img src={p.thumbnail} alt={p.title} className="w-16 h-16 rounded-xl object-cover" />
+              <img
+                src={p.thumbnail}
+                alt={p.title}
+                className="w-16 h-16 rounded-xl object-cover bg-slate-900 border border-slate-700"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80';
+                }}
+              />
               <div className="flex-1 min-w-0">
                 <span className="text-[10px] uppercase font-bold text-indigo-400">{p.category}</span>
                 <h4 className="font-bold text-sm text-slate-100 truncate">{p.title}</h4>

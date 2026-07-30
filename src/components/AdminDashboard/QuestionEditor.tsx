@@ -1,16 +1,21 @@
-import React, { useState } from 'react';
-import { HelpCircle, Plus, Trash2, Edit3, Save, X, Image as ImageIcon, Search, CheckSquare, Square, AlertTriangle, RefreshCw, Eraser } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { HelpCircle, Plus, Trash2, Edit3, Save, X, Image as ImageIcon, Search, CheckSquare, Square, AlertTriangle, RefreshCw, Eraser, Upload } from 'lucide-react';
 import { Question, QuizPack } from '../../types';
 import { dbStore } from '../../lib/storage';
 import { soundFx } from '../../lib/sound';
+import { compressImage } from '../../lib/imageUtils';
 
 export const QuestionEditor: React.FC = () => {
-  const packs = dbStore.getPacks();
-  const [selectedPackId, setSelectedPackId] = useState<string>(packs[0]?.id || '');
+  const [packs, setPacks] = useState<QuizPack[]>(() => dbStore.getPacks());
+  const [selectedPackId, setSelectedPackId] = useState<string>(() => packs[0]?.id || '');
   const [questions, setQuestions] = useState<Question[]>(() => dbStore.getQuestions());
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
   const [searchFilter, setSearchFilter] = useState<string>('');
   const [selectedQuestionIds, setSelectedQuestionIds] = useState<string[]>([]);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStatusMsg, setSyncStatusMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
+
   const [showConfirmModal, setShowConfirmModal] = useState<{
     isOpen: boolean;
     title: string;
@@ -22,6 +27,20 @@ export const QuestionEditor: React.FC = () => {
     message: '',
     onConfirm: () => {}
   });
+
+  // Automatically update state whenever dbStore changes (e.g. background Firestore sync)
+  useEffect(() => {
+    const unsub = dbStore.subscribe(() => {
+      const freshPacks = dbStore.getPacks();
+      const freshQs = dbStore.getQuestions();
+      setPacks(freshPacks);
+      setQuestions(freshQs);
+      if (!selectedPackId && freshPacks.length > 0) {
+        setSelectedPackId(freshPacks[0].id);
+      }
+    });
+    return () => unsub();
+  }, [selectedPackId]);
 
   const selectedPack = packs.find(p => p.id === selectedPackId);
 
@@ -43,7 +62,38 @@ export const QuestionEditor: React.FC = () => {
 
   const reloadQuestions = () => {
     setQuestions(dbStore.getQuestions());
+    setPacks(dbStore.getPacks());
     setSelectedQuestionIds([]);
+  };
+
+  const handleSyncFirestore = async () => {
+    soundFx.playClick();
+    setIsSyncing(true);
+    setSyncStatusMsg(null);
+    const result = await dbStore.syncWithFirestore();
+    setIsSyncing(false);
+    if (result.success) {
+      soundFx.playCorrect();
+      setSyncStatusMsg({ type: 'success', text: result.message });
+      reloadQuestions();
+    } else {
+      soundFx.playWrong();
+      setSyncStatusMsg({ type: 'error', text: result.message });
+    }
+  };
+
+  const handleImageFileSelected = async (file: File) => {
+    if (!editingQuestion || !file.type.startsWith('image/')) return;
+    try {
+      const compressedDataUrl = await compressImage(file, 800, 800, 0.8);
+      setEditingQuestion({
+        ...editingQuestion,
+        image: compressedDataUrl
+      });
+      soundFx.playPop();
+    } catch (err) {
+      console.error('Error compressing image:', err);
+    }
   };
 
   const handleAddNewQuestion = () => {
@@ -190,12 +240,22 @@ export const QuestionEditor: React.FC = () => {
             Quiz Pack Image & Question Manager
           </h3>
           <p className="text-xs text-slate-400 mt-1">
-            Select any quiz pack to edit, update, or permanently remove picture images and associated trivia information.
+            Select any quiz pack to edit, update, sync Firestore images, or permanently remove picture questions.
           </p>
         </div>
 
-        {/* Pack Selector & Add Action */}
+        {/* Pack Selector & Add/Sync Action */}
         <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={handleSyncFirestore}
+            disabled={isSyncing}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-black text-xs transition-all shadow-md shadow-indigo-600/30 whitespace-nowrap cursor-pointer"
+            title="Fetch and synchronize images directly from Firestore cloud storage"
+          >
+            <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin text-indigo-200' : ''}`} />
+            <span>{isSyncing ? 'SYNCING FIRESTORE...' : 'SYNC FIRESTORE IMAGES'}</span>
+          </button>
+
           <div className="flex items-center gap-2 bg-slate-950 px-3 py-2 rounded-2xl border border-slate-800">
             <span className="text-[11px] font-bold text-slate-400 uppercase">Select Pack:</span>
             <select
@@ -224,11 +284,29 @@ export const QuestionEditor: React.FC = () => {
         </div>
       </div>
 
+      {syncStatusMsg && (
+        <div className={`p-4 rounded-2xl border text-xs font-bold flex items-center justify-between ${
+          syncStatusMsg.type === 'success' ? 'bg-emerald-950/80 border-emerald-500/50 text-emerald-200' : 'bg-rose-950/80 border-rose-500/50 text-rose-200'
+        }`}>
+          <span>{syncStatusMsg.text}</span>
+          <button onClick={() => setSyncStatusMsg(null)} className="p-1 hover:text-white">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Selected Pack Summary Banner */}
       {selectedPack && (
         <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <img src={selectedPack.thumbnail} alt={selectedPack.title} className="w-12 h-12 rounded-xl object-cover" />
+            <img
+              src={selectedPack.thumbnail}
+              alt={selectedPack.title}
+              className="w-12 h-12 rounded-xl object-cover bg-slate-900"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80';
+              }}
+            />
             <div>
               <div className="flex items-center gap-2">
                 <h4 className="font-black text-sm text-amber-300">{selectedPack.title}</h4>
@@ -299,6 +377,13 @@ export const QuestionEditor: React.FC = () => {
       {/* Question Form Modal */}
       {editingQuestion && (
         <div className="p-6 rounded-3xl bg-slate-800 border-2 border-indigo-500/50 shadow-2xl space-y-4">
+          <input
+            ref={editFileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={e => e.target.files && e.target.files[0] && handleImageFileSelected(e.target.files[0])}
+          />
           <div className="flex items-center justify-between border-b border-slate-700 pb-3">
             <h4 className="font-bold text-lg text-amber-300">
               Edit Question #{editingQuestion.order}
@@ -333,17 +418,33 @@ export const QuestionEditor: React.FC = () => {
               />
             </div>
 
-            <div className="md:col-span-2">
-              <label className="font-bold text-slate-300 block mb-1">Picture Image URL</label>
-              <div className="flex gap-2">
+            <div className="md:col-span-2 space-y-1">
+              <label className="font-bold text-slate-300 block">Picture Image URL / File Upload</label>
+              <div className="flex gap-2 items-center">
                 <input
                   type="text"
                   value={editingQuestion.image}
                   onChange={e => setEditingQuestion({ ...editingQuestion, image: e.target.value })}
-                  className="flex-1 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-200"
+                  className="flex-1 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-200 text-xs"
+                  placeholder="Paste URL or upload image file below"
                 />
+                <button
+                  type="button"
+                  onClick={() => editFileInputRef.current?.click()}
+                  className="px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs flex items-center gap-1 shrink-0"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>Upload Image File</span>
+                </button>
                 {editingQuestion.image && (
-                  <img src={editingQuestion.image} alt="Preview" className="w-10 h-10 rounded-lg object-cover border border-slate-700 shrink-0" />
+                  <img
+                    src={editingQuestion.image}
+                    alt="Preview"
+                    className="w-10 h-10 rounded-lg object-cover border border-slate-700 shrink-0 bg-slate-900"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=800&q=80';
+                    }}
+                  />
                 )}
               </div>
             </div>
@@ -438,7 +539,14 @@ export const QuestionEditor: React.FC = () => {
                 </span>
 
                 <div className="relative group shrink-0">
-                  <img src={q.image} alt={q.correctAnswer} className="w-14 h-14 rounded-xl object-cover border border-slate-700 bg-slate-900" />
+                  <img
+                    src={q.image}
+                    alt={q.correctAnswer}
+                    className="w-14 h-14 rounded-xl object-cover border border-slate-700 bg-slate-900"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=800&q=80';
+                    }}
+                  />
                 </div>
 
                 <div className="min-w-0 flex-1">

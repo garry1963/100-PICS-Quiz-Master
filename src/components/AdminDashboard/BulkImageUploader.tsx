@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Upload,
   Image as ImageIcon,
@@ -43,6 +43,14 @@ export const BulkImageUploader: React.FC<BulkImageUploaderProps> = ({
     const cats = dbStore.getCategories();
     return cats.length > 0 ? cats[0].id : '';
   });
+
+  useEffect(() => {
+    const unsub = dbStore.subscribe(() => {
+      setCategories(dbStore.getCategories());
+      setPacks(dbStore.getPacks());
+    });
+    return () => unsub();
+  }, []);
 
   const [packOption, setPackOption] = useState<'existing' | 'new'>('existing');
   const [selectedPackId, setSelectedPackId] = useState<string>('');

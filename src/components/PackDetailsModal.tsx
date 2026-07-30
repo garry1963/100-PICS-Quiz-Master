@@ -11,9 +11,12 @@ import {
   Flame,
   Star,
   Tag,
-  WifiOff
+  WifiOff,
+  CloudDownload,
+  ShieldCheck
 } from 'lucide-react';
 import { QuizPack, PlayerPackProgress } from '../types';
+import { dbStore } from '../lib/storage';
 import { soundFx } from '../lib/sound';
 
 interface PackDetailsModalProps {
@@ -37,24 +40,54 @@ export const PackDetailsModal: React.FC<PackDetailsModalProps> = ({
 
   const [downloading, setDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
-  const handleDownload = () => {
+  const isStarterPack = pack.id === 'pack-world-animals' || pack.id === 'pack-wild-animals';
+
+  const handleDownloadCloud = async () => {
     soundFx.playClick();
     setDownloading(true);
-    setDownloadProgress(10);
+    setDownloadProgress(20);
+    setStatusMessage('Connecting to cloud server...');
 
     const interval = setInterval(() => {
-      setDownloadProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setDownloading(false);
-          soundFx.playCorrect();
-          onDownloadPack(pack.id);
-          return 100;
-        }
-        return prev + 25;
-      });
-    }, 200);
+      setDownloadProgress(prev => (prev < 90 ? prev + 15 : prev));
+    }, 150);
+
+    try {
+      const result = await dbStore.downloadPackFromCloud(pack.id);
+      clearInterval(interval);
+      setDownloadProgress(100);
+      setDownloading(false);
+      
+      if (result.success) {
+        soundFx.playCorrect();
+        onDownloadPack(pack.id);
+        setStatusMessage('Cached in local storage!');
+      } else {
+        soundFx.playWrong();
+        setStatusMessage(result.message || 'Download failed');
+      }
+    } catch {
+      clearInterval(interval);
+      setDownloading(false);
+      onDownloadPack(pack.id);
+    }
+  };
+
+  const handlePlayOrDownload = async () => {
+    soundFx.playClick();
+    if (!isDownloaded) {
+      setDownloading(true);
+      setDownloadProgress(30);
+      setStatusMessage('On-demand downloading from cloud...');
+      const result = await dbStore.downloadPackFromCloud(pack.id);
+      setDownloadProgress(100);
+      setDownloading(false);
+      onDownloadPack(pack.id);
+    }
+    onPlayPack(pack.id);
+    onClose();
   };
 
   return (
@@ -92,7 +125,7 @@ export const PackDetailsModal: React.FC<PackDetailsModalProps> = ({
             <X className="w-5 h-5" />
           </button>
 
-          {/* Difficulty & Category Badges */}
+          {/* Badges */}
           <div className="absolute top-4 left-4 flex flex-wrap items-center gap-2">
             <span className="px-3 py-1 rounded-full bg-indigo-600/90 text-white font-extrabold text-xs shadow-md backdrop-blur-md">
               {pack.category}
@@ -100,10 +133,21 @@ export const PackDetailsModal: React.FC<PackDetailsModalProps> = ({
             <span className="px-3 py-1 rounded-full bg-amber-500/90 text-slate-950 font-black text-xs shadow-md backdrop-blur-md">
               {pack.difficulty}
             </span>
-            {isDownloaded && (
+
+            {isStarterPack ? (
+              <span className="px-3 py-1 rounded-full bg-emerald-500 text-slate-950 font-black text-xs flex items-center gap-1 shadow-md backdrop-blur-md">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                Basic Starter Pack (Local)
+              </span>
+            ) : isDownloaded ? (
               <span className="px-3 py-1 rounded-full bg-emerald-500/90 text-slate-950 font-extrabold text-xs flex items-center gap-1 shadow-md backdrop-blur-md">
                 <WifiOff className="w-3.5 h-3.5" />
-                Offline Ready
+                Cloud Cached (Offline Ready)
+              </span>
+            ) : (
+              <span className="px-3 py-1 rounded-full bg-indigo-500/90 text-white font-extrabold text-xs flex items-center gap-1 shadow-md backdrop-blur-md">
+                <CloudDownload className="w-3.5 h-3.5" />
+                On-Demand Cloud Pack
               </span>
             )}
           </div>
@@ -170,40 +214,42 @@ export const PackDetailsModal: React.FC<PackDetailsModalProps> = ({
             </div>
           </div>
 
+          {statusMessage && (
+            <div className="p-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 text-xs font-bold text-indigo-700 dark:text-indigo-300 text-center">
+              {statusMessage}
+            </div>
+          )}
+
           {/* Download & Play Actions */}
           <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
             {!isDownloaded ? (
               <button
                 id="download-pack-btn"
                 disabled={downloading}
-                onClick={handleDownload}
-                className="w-full sm:w-auto px-5 py-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-bold text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                onClick={handleDownloadCloud}
+                className="w-full sm:w-auto px-5 py-3.5 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 font-black text-xs flex items-center justify-center gap-2 transition-all disabled:opacity-50"
               >
-                <Download className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                <span>{downloading ? `Downloading (${downloadProgress}%)...` : `Download (${pack.downloadSize})`}</span>
+                <CloudDownload className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                <span>{downloading ? `Fetching from Cloud (${downloadProgress}%)...` : `Download Pack`}</span>
               </button>
             ) : (
               <div className="w-full sm:w-auto px-4 py-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 font-bold text-xs flex items-center justify-center gap-2">
-                <CheckCircle2 className="w-4 h-4" />
-                <span>Downloaded for Offline Play</span>
+                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                <span>{isStarterPack ? 'Starter Pack Ready' : 'Cached for Offline Play'}</span>
               </div>
             )}
 
             <button
               id="play-pack-modal-btn"
-              onClick={() => {
-                soundFx.playClick();
-                onPlayPack(pack.id);
-                onClose();
-              }}
-              className="w-full flex-1 py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-base shadow-lg shadow-indigo-200 dark:shadow-none flex items-center justify-center gap-2 transition-all active:scale-[0.99]"
+              disabled={downloading}
+              onClick={handlePlayOrDownload}
+              className="w-full flex-1 py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-base shadow-lg shadow-indigo-200 dark:shadow-none flex items-center justify-center gap-2 transition-all active:scale-[0.99] disabled:opacity-50"
             >
               <Play className="w-5 h-5 fill-current" />
-              <span>{progress.completedQuestions.length > 0 ? 'CONTINUE QUIZ' : 'START PLAYING NOW'}</span>
+              <span>{isDownloaded ? 'PLAY PACK NOW' : 'DOWNLOAD & PLAY'}</span>
             </button>
           </div>
         </div>
-
       </div>
     </div>
   );

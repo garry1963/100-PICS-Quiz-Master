@@ -73,6 +73,29 @@ export const DatabaseMaintenance: React.FC = () => {
           </label>
         </div>
 
+        {/* Storage Cleanup */}
+        <div className="p-5 rounded-2xl bg-slate-800/80 border border-indigo-500/30 space-y-3">
+          <div className="flex items-center gap-2 font-bold text-sm text-indigo-300">
+            <Trash2 className="w-5 h-5 text-indigo-400" />
+            <span>Cleanup Completed Image Caches</span>
+          </div>
+          <p className="text-xs text-slate-400">
+            Purges cached images of completed puzzles when device storage runs low while keeping player stats intact.
+          </p>
+
+          <button
+            onClick={() => {
+              soundFx.playClick();
+              const result = dbStore.cleanOldestCompletedPuzzleImages();
+              soundFx.playCorrect();
+              alert(result.message);
+            }}
+            className="w-full py-3 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/40 text-indigo-300 font-bold text-xs transition-colors"
+          >
+            DELETE COMPLETED PUZZLE IMAGES
+          </button>
+        </div>
+
         {/* Clear Personal Statistics */}
         <div className="p-5 rounded-2xl bg-slate-800/80 border border-amber-500/30 space-y-3">
           <div className="flex items-center gap-2 font-bold text-sm text-amber-300">
