@@ -61,12 +61,23 @@ export const AIGeneratorModal: React.FC = () => {
 
     // Save Questions
     (generatedPack.questions || []).forEach((q: any, idx: number) => {
-      const query = encodeURIComponent(q.suggestedImageQuery || q.correctAnswer || topic);
+      const queryTerm = encodeURIComponent(q.suggestedImageQuery || q.correctAnswer || topic || 'nature');
+      // Curated list of high-quality Unsplash image URLs based on index to ensure visual variety if query fails
+      const defaultVarieties = [
+        'https://images.unsplash.com/photo-1546182990-dffeafbe841d?auto=format&fit=crop&w=800&q=80',
+        'https://images.unsplash.com/photo-1557050543-4d5f4e07ef46?auto=format&fit=crop&w=800&q=80',
+        'https://images.unsplash.com/photo-1564349683136-77e08dba1ef9?auto=format&fit=crop&w=800&q=80',
+        'https://images.unsplash.com/photo-1534188753412-3e26d0d618d6?auto=format&fit=crop&w=800&q=80',
+        'https://images.unsplash.com/photo-1574063413132-355dbfd83e0c?auto=format&fit=crop&w=800&q=80',
+        'https://images.unsplash.com/photo-1535591273668-578e31182c4f?auto=format&fit=crop&w=800&q=80'
+      ];
+      const imageUrl = q.imageUrl || `https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=800&q=80&sig=${idx}`;
+      
       const question: Question = {
         id: `q-ai-${Date.now()}-${idx}`,
         packId: newPackId,
         order: idx + 1,
-        image: `https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=800&q=80`,
+        image: imageUrl || defaultVarieties[idx % defaultVarieties.length],
         correctAnswer: String(q.correctAnswer || 'ANSWER').toUpperCase(),
         alternativeAcceptedAnswers: (q.alternativeAcceptedAnswers || []).map((a: string) => a.toUpperCase()),
         difficulty: pack.difficulty,

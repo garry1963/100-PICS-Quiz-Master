@@ -38,6 +38,11 @@ import {
   fetchCategoriesFromFirestore,
   purgeSampleDataFromFirestore
 } from './firebase';
+import {
+  saveImageToIndexedDB,
+  getImageFromIndexedDB,
+  getAllImagesFromIndexedDB
+} from './imageDB';
 
 const KEYS = {
   CURRENT_USER: '100pics_current_user',
@@ -103,18 +108,19 @@ class LocalStorageEngine {
     try {
       localStorage.setItem(key, JSON.stringify(value));
     } catch {
-      // If localStorage quota is exceeded (e.g. heavy image data), trim data URLs for persistence fallback
+      // If localStorage quota is exceeded, persist base64 data URLs to IndexedDB
       if (key === KEYS.QUESTIONS && Array.isArray(value)) {
         try {
           const trimmed = value.map((q: any) => {
-            if (q && typeof q.image === 'string' && q.image.startsWith('data:') && q.image.length > 500) {
-              return { ...q, image: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=800&q=80' };
+            if (q && typeof q.image === 'string' && q.image.startsWith('data:')) {
+              saveImageToIndexedDB(q.id, q.image).catch(() => {});
+              return { ...q, image: `idb:${q.id}` };
             }
             return q;
           });
           localStorage.setItem(key, JSON.stringify(trimmed));
         } catch {
-          // In-memory cache & Firestore retain full image data safely
+          // inMemoryCache & IndexedDB & Firestore retain full image data safely
         }
       }
     }
@@ -259,6 +265,31 @@ class LocalStorageEngine {
     }
   }
 
+  public async rehydrateImagesFromIndexedDB() {
+    try {
+      const idbImages = await getAllImagesFromIndexedDB();
+      const questions = this.getQuestions();
+      let updated = false;
+      const rehydrated = questions.map(q => {
+        if (idbImages[q.id]) {
+          updated = true;
+          return { ...q, image: idbImages[q.id] };
+        }
+        if (q.image && q.image.startsWith('idb:') && idbImages[q.image.replace('idb:', '')]) {
+          updated = true;
+          return { ...q, image: idbImages[q.image.replace('idb:', '')] };
+        }
+        return q;
+      });
+      if (updated) {
+        this.inMemoryCache.set(KEYS.QUESTIONS, rehydrated);
+        this.notifyListeners();
+      }
+    } catch (err) {
+      console.warn('rehydrateImagesFromIndexedDB error:', err);
+    }
+  }
+
   public ensureInitialized() {
     if (!localStorage.getItem(KEYS.CATEGORIES)) {
       this.setItem(KEYS.CATEGORIES, INITIAL_CATEGORIES);
@@ -278,6 +309,9 @@ class LocalStorageEngine {
     if (!localStorage.getItem(KEYS.CURRENT_USER)) {
       this.setItem(KEYS.CURRENT_USER, DEFAULT_MASTER_ADMIN);
     }
+
+    // Rehydrate heavy base64 images stored in IndexedDB
+    this.rehydrateImagesFromIndexedDB().catch(() => {});
 
     // Always strip lingering sample data
     this.purgeSampleData();
@@ -437,12 +471,20 @@ class LocalStorageEngine {
   }
 
   public saveQuestions(questions: Question[]) {
+    questions.forEach(q => {
+      if (q.image && q.image.startsWith('data:')) {
+        saveImageToIndexedDB(q.id, q.image).catch(() => {});
+      }
+      saveQuestionToFirestore(q).catch(() => {});
+    });
     this.setItem(KEYS.QUESTIONS, questions);
-    questions.forEach(q => saveQuestionToFirestore(q).catch(() => {}));
     this.notifyListeners();
   }
 
   public saveQuestion(question: Question) {
+    if (question.image && question.image.startsWith('data:')) {
+      saveImageToIndexedDB(question.id, question.image).catch(() => {});
+    }
     const questions = this.getQuestions();
     const idx = questions.findIndex(q => q.id === question.id);
     if (idx >= 0) {

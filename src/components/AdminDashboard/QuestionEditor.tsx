@@ -103,7 +103,7 @@ export const QuestionEditor: React.FC = () => {
       id: `q-${Date.now()}`,
       packId: selectedPackId,
       order: packQuestions.length + 1,
-      image: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=800&q=80',
+      image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80',
       correctAnswer: 'NEW ANSWER',
       alternativeAcceptedAnswers: [],
       difficulty: currentPack?.difficulty || 'Easy',

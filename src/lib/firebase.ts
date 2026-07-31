@@ -514,7 +514,7 @@ export async function seedFirestoreIfEmpty(
 /** Purge all sample data documents from Firestore */
 export async function purgeSampleDataFromFirestore(): Promise<void> {
   const sampleCategoryIds = [
-    'cat-logos', 'cat-flags', 'cat-movies', 'cat-animals',
+    'cat-logos', 'cat-flags', 'cat-movies',
     'cat-landmarks', 'cat-games', 'cat-food', 'cat-music'
   ];
   const samplePackIds = [
@@ -536,7 +536,7 @@ export async function purgeSampleDataFromFirestore(): Promise<void> {
       const id = d.id;
       if (
         id.startsWith('q-logo-') || id.startsWith('q-flag-') ||
-        id.startsWith('q-movie-') || id.startsWith('q-animal-') ||
+        id.startsWith('q-movie-') ||
         id.startsWith('q-landmark-') || id.startsWith('q-game-') ||
         id.startsWith('q-food-') || id.startsWith('q-music-')
       ) {
