@@ -88,6 +88,7 @@ export const AIGeneratorModal: React.FC = () => {
       };
       dbStore.saveQuestion(question);
     });
+    dbStore.markPackDownloaded(newPackId);
 
     dbStore.addLog('success', 'content', `AI Pack saved to database: ${pack.title}`);
     alert(`Successfully created and published "${pack.title}" with ${generatedPack.questions.length} picture questions!`);

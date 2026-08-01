@@ -55,7 +55,7 @@ export function App() {
   const [categories, setCategories] = useState(() => dbStore.getCategories());
   const [downloadedPackIds, setDownloadedPackIds] = useState<string[]>(() => dbStore.getDownloadedPackIds());
 
-  // Auto sign-out verification on app mount
+  // Auto sign-out verification & store subscription on app mount
   useEffect(() => {
     const activeSession = sessionStorage.getItem('active_session_auth');
     if (activeSession !== 'true') {
@@ -64,6 +64,11 @@ export function App() {
       dbStore.setCurrentUser(UNAUTHENTICATED_GUEST);
       signOutAdmin().catch(() => {});
     }
+
+    const unsub = dbStore.subscribe(() => {
+      refreshAllData();
+    });
+    return () => unsub();
   }, []);
 
   const [authNoticeMessage, setAuthNoticeMessage] = useState<string | null>(null);

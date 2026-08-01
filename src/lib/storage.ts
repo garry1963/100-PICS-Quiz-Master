@@ -445,6 +445,7 @@ class LocalStorageEngine {
       packs.unshift(pack);
     }
     this.setItem(KEYS.PACKS, packs);
+    this.markPackDownloaded(pack.id);
     savePackToFirestore(pack).catch(() => {});
     this.notifyListeners();
   }
@@ -613,10 +614,68 @@ class LocalStorageEngine {
     return !exists;
   }
 
+  private async cacheImageForOfflinePlay(questionId: string, imageSrc: string): Promise<string> {
+    if (!imageSrc) return imageSrc;
+    
+    if (imageSrc.startsWith('data:')) {
+      await saveImageToIndexedDB(questionId, imageSrc).catch(() => {});
+      return imageSrc;
+    }
+
+    if (imageSrc.startsWith('idb:')) {
+      return imageSrc;
+    }
+
+    if (imageSrc.startsWith('http://') || imageSrc.startsWith('https://')) {
+      try {
+        const response = await fetch(imageSrc, { mode: 'cors' });
+        if (response.ok) {
+          const blob = await response.blob();
+          return new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = async () => {
+              const dataUrl = reader.result as string;
+              if (dataUrl && dataUrl.startsWith('data:')) {
+                await saveImageToIndexedDB(questionId, dataUrl).catch(() => {});
+                resolve(dataUrl);
+              } else {
+                resolve(imageSrc);
+              }
+            };
+            reader.onerror = () => resolve(imageSrc);
+            reader.readAsDataURL(blob);
+          });
+        }
+      } catch {
+        // Fallback if fetch fails or CORS restricted
+      }
+    }
+
+    return imageSrc;
+  }
+
   public getDownloadedPackIds(): string[] {
-    return this.getItem<string[]>(KEYS.OFFLINE_DOWNLOADS, [
+    const rawDownloads = this.getItem<string[]>(KEYS.OFFLINE_DOWNLOADS, [
       'pack-world-animals'
     ]);
+    const downloadsSet = new Set(rawDownloads);
+
+    // Automatically count packs as downloaded if they have local questions stored
+    try {
+      const allPacks = this.getPacks();
+      const allQuestions = this.getQuestions();
+
+      allPacks.forEach(p => {
+        const packQs = allQuestions.filter(q => q.packId === p.id);
+        if (packQs.length > 0) {
+          downloadsSet.add(p.id);
+        }
+      });
+    } catch {
+      // fallback
+    }
+
+    return Array.from(downloadsSet);
   }
 
   public markPackDownloaded(packId: string) {
@@ -654,14 +713,22 @@ class LocalStorageEngine {
         };
       }
 
+      // Pre-fetch & cache question images into IndexedDB / local storage for 100% offline play
+      const processedQuestions: Question[] = await Promise.all(
+        targetQuestions.map(async (q) => {
+          const cachedImg = await this.cacheImageForOfflinePlay(q.id, q.image);
+          return { ...q, image: cachedImg };
+        })
+      );
+
       // Save & Smart Cache locally
       this.savePack(targetPack);
-      if (targetQuestions.length > 0) {
+      if (processedQuestions.length > 0) {
         const allQuestions = this.getQuestions();
         const existingIds = new Set(allQuestions.map(q => q.id));
         const updatedQuestions = [...allQuestions];
         
-        targetQuestions.forEach(q => {
+        processedQuestions.forEach(q => {
           if (existingIds.has(q.id)) {
             const idx = updatedQuestions.findIndex(x => x.id === q.id);
             if (idx >= 0) updatedQuestions[idx] = q;
@@ -677,9 +744,9 @@ class LocalStorageEngine {
 
       return {
         success: true,
-        message: `Successfully downloaded and cached "${targetPack.title}" (${targetQuestions.length} picture questions) into local temporary storage.`,
+        message: `Successfully downloaded and cached "${targetPack.title}" (${processedQuestions.length} picture questions) into local storage for offline play.`,
         pack: targetPack,
-        questions: targetQuestions
+        questions: processedQuestions
       };
     } catch (err: any) {
       console.warn('Error downloading cloud pack:', err);

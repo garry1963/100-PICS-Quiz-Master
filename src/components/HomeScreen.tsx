@@ -276,16 +276,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                     <span className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 font-black text-[10px] uppercase border border-amber-200 dark:border-amber-800">
                       {pack.difficulty}
                     </span>
-
-                    {/* Category Tag */}
-                    <span className="absolute bottom-3 left-3 px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 font-extrabold text-[10px] border border-indigo-200 dark:border-indigo-800">
-                      {pack.category}
-                    </span>
                   </div>
 
                   {/* Content Info */}
                   <div className="p-5 flex-1 flex flex-col justify-between space-y-3">
                     <div>
+                      <span className="text-[11px] font-extrabold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider block mb-1">
+                        {pack.category}
+                      </span>
                       <h4 className="font-black text-slate-800 dark:text-slate-100 text-lg group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors truncate">
                         {pack.title}
                       </h4>

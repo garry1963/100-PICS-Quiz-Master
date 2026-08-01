@@ -226,6 +226,7 @@ export const BulkImageUploader: React.FC<BulkImageUploaderProps> = ({
         targetPack.thumbnail = packQuestions[0].image;
       }
       dbStore.savePack(targetPack);
+      dbStore.markPackDownloaded(targetPackId);
     }
 
     dbStore.addLog(

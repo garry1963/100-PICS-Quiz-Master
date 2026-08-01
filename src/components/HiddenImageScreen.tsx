@@ -377,38 +377,38 @@ export const HiddenImageScreen: React.FC<HiddenImageScreenProps> = ({
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-4 space-y-5">
+    <div className="w-full max-w-4xl mx-auto px-4 py-4 space-y-5 box-border overflow-x-hidden">
       
       {/* Top Header Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-4 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-[28px] shadow-xs text-slate-800 dark:text-slate-100">
-        <div className="flex items-center gap-3">
+      <div className="w-full flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-4 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-[28px] shadow-xs text-slate-800 dark:text-slate-100 min-w-0 box-border overflow-hidden">
+        <div className="flex items-center gap-3 min-w-0">
           <button
             id="hidden-back-btn"
             onClick={() => {
               soundFx.playClick();
               onBack();
             }}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-black transition-colors"
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-black transition-colors shrink-0"
           >
             <ArrowLeft className="w-4 h-4" />
             <span className="hidden sm:inline">Back</span>
           </button>
 
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="font-black text-base text-slate-900 dark:text-slate-100 uppercase tracking-tight flex items-center gap-1.5">
-                <EyeOff className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                Hidden Picture Quiz
+          <div className="min-w-0 truncate">
+            <div className="flex items-center gap-2 min-w-0">
+              <h2 className="font-black text-sm sm:text-base text-slate-900 dark:text-slate-100 uppercase tracking-tight flex items-center gap-1.5 truncate">
+                <EyeOff className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                <span className="truncate">Hidden Picture Quiz</span>
               </h2>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-extrabold">
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-extrabold truncate">
               Picture {currentQuestionIndex + 1} of {filteredQuestions.length}
             </p>
           </div>
         </div>
 
         {/* Controls: Grid Size & Coins */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0 justify-end">
           {/* Grid Size Toggle */}
           <button
             onClick={() => {
@@ -431,7 +431,7 @@ export const HiddenImageScreen: React.FC<HiddenImageScreenProps> = ({
       </div>
 
       {/* Hidden Picture Category / Pack Navigation Tabs */}
-      <div className="space-y-1.5">
+      <div className="space-y-1.5 min-w-0">
         <div className="flex items-center justify-between px-1 text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">
           <span className="flex items-center gap-1.5">
             <Tag className="w-3.5 h-3.5 text-indigo-500" />
@@ -440,7 +440,7 @@ export const HiddenImageScreen: React.FC<HiddenImageScreenProps> = ({
           <span className="text-[10px] text-slate-400 font-bold">{filteredQuestions.length} Puzzles</span>
         </div>
 
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none max-w-full">
           <button
             onClick={() => {
               soundFx.playClick();
@@ -492,14 +492,14 @@ export const HiddenImageScreen: React.FC<HiddenImageScreenProps> = ({
         </div>
       </div>
 
-      {/* SECTION 1: ENLARGED HIDDEN PICTURE (POSITIONED ABOVE LETTERS & SLOTS) */}
+      {/* 1. PICTURE: ENLARGED HIDDEN PICTURE */}
       <div className="bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-[32px] p-4 sm:p-6 shadow-md space-y-4 text-center">
         
         {/* Tab Header Badge for Hidden Picture */}
         <div className="flex items-center justify-between text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 px-1">
           <span className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 font-black">
             <ImageIcon className="w-4 h-4" />
-            Hidden Picture Clue
+            Hidden Picture Puzzle
           </span>
           <span className="flex items-center gap-1 text-slate-400 text-[11px]">
             <Eye className="w-3.5 h-3.5 text-indigo-500" />
@@ -511,10 +511,10 @@ export const HiddenImageScreen: React.FC<HiddenImageScreenProps> = ({
           </span>
         </div>
 
-        {/* Enlarged Picture Canvas Frame */}
-        <div className="relative w-full aspect-square max-w-md sm:max-w-lg mx-auto bg-slate-950 border-4 border-slate-200 dark:border-slate-800 rounded-[28px] overflow-hidden shadow-xl group select-none transition-all">
+        {/* Picture Canvas Frame */}
+        <div className="relative w-full aspect-square max-w-md mx-auto bg-slate-950 border-4 border-slate-200 dark:border-slate-800 rounded-[28px] overflow-hidden shadow-xl group select-none transition-all">
           
-          {/* The Actual Hidden Image - Always crisp and fully unblurred once solved */}
+          {/* The Actual Hidden Image */}
           <img
             src={currentQuestion.image}
             alt="Hidden Quiz Clue"
@@ -577,7 +577,7 @@ export const HiddenImageScreen: React.FC<HiddenImageScreenProps> = ({
 
         {/* Quick Action under Image */}
         {!isCorrect && tilesRemainingCount > 0 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-1 max-w-md sm:max-w-lg mx-auto">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-1 max-w-md mx-auto">
             <button
               onClick={handleRevealRandomSquare}
               className="w-full py-3 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/80 border-2 border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 font-black text-xs flex items-center justify-center gap-2 transition-all active:scale-98 shadow-xs"
@@ -594,13 +594,61 @@ export const HiddenImageScreen: React.FC<HiddenImageScreenProps> = ({
         )}
       </div>
 
-      {/* SECTION 2: NAME THE HIDDEN PICTURE (ANSWER SLOTS) - POSITIONED BELOW HIDDEN PICTURE */}
-      <div className="p-6 rounded-[32px] bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 shadow-md space-y-4 text-center">
+      {/* 2. CLUE: HINT TEXT & HINT ACTION BUTTONS */}
+      {/* Hint Alert Message */}
+      {hintMessage && (
+        <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs font-bold text-center animate-fade-in">
+          💡 {hintMessage}
+        </div>
+      )}
+
+      {/* Text Clue (if present) */}
+      {currentQuestion.hint && (
+        <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300 font-medium flex items-center gap-2">
+          <HelpCircle className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+          <span className="italic">Clue: {currentQuestion.hint}</span>
+        </div>
+      )}
+
+      {/* Hint Action Buttons */}
+      {!isCorrect && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <button
+            onClick={handleHintRevealLetter}
+            className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 hover:border-amber-300 text-amber-700 dark:text-amber-300 font-extrabold text-xs flex flex-col items-center justify-center gap-1 transition-all shadow-xs"
+          >
+            <Lightbulb className="w-5 h-5 text-amber-500" />
+            <span>Reveal Letter</span>
+            <span className="text-[10px] text-amber-600 font-black">15 🪙</span>
+          </button>
+
+          <button
+            onClick={handleRandomQuestion}
+            className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 hover:border-indigo-300 text-slate-700 dark:text-slate-300 font-extrabold text-xs flex flex-col items-center justify-center gap-1 transition-all shadow-xs"
+          >
+            <Shuffle className="w-5 h-5 text-indigo-500" />
+            <span>Shuffle Picture</span>
+            <span className="text-[10px] text-slate-400 font-black">Free</span>
+          </button>
+
+          <button
+            onClick={handleNextQuestion}
+            className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 hover:border-slate-300 text-slate-500 font-extrabold text-xs flex flex-col items-center justify-center gap-1 transition-all shadow-xs col-span-2 sm:col-span-1"
+          >
+            <ArrowLeft className="w-5 h-5 text-slate-400 rotate-180" />
+            <span>Skip Picture</span>
+            <span className="text-[10px] text-slate-400 font-black">Free</span>
+          </button>
+        </div>
+      )}
+
+      {/* 3. WORD: ANSWER SLOTS */}
+      <div className="p-5 sm:p-6 rounded-[32px] bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 shadow-md space-y-3 text-center">
         
         <div className="flex items-center justify-between text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 px-1">
           <span className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
             <Tag className="w-4 h-4" />
-            Name The Hidden Picture
+            Word Answer
           </span>
           <span className="text-[11px] text-slate-400 font-extrabold">
             {answer.replace(/[^A-Z]/g, '').length} Letters
@@ -608,7 +656,7 @@ export const HiddenImageScreen: React.FC<HiddenImageScreenProps> = ({
         </div>
 
         {/* Answer Letter Boxes */}
-        <div className="flex flex-wrap items-center justify-center gap-2 py-2">
+        <div className="flex flex-wrap items-center justify-center gap-2 py-1">
           {answer.split('').map((char, index) => {
             const isLetter = /[A-Z]/.test(char);
             const val = answerSlots[index] || '';
@@ -641,12 +689,13 @@ export const HiddenImageScreen: React.FC<HiddenImageScreenProps> = ({
         </div>
       </div>
 
-      {/* SECTION 3: AVAILABLE LETTERS (LETTER BANK) - POSITIONED BELOW ANSWER SLOTS */}
+      {/* 4. KEYBOARD: AVAILABLE LETTERS (POSITIONED DIRECTLY BELOW WORD) */}
       {!isCorrect && (
-        <div className="p-6 rounded-[32px] bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 shadow-md space-y-4 text-center">
+        <div className="p-5 sm:p-6 rounded-[32px] bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 shadow-md space-y-3 text-center">
           <div className="flex items-center justify-between text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 px-1">
-            <span className="text-indigo-600 dark:text-indigo-400 font-black">
-              Available Letters
+            <span className="text-indigo-600 dark:text-indigo-400 font-black flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4 text-indigo-500" />
+              Keyboard (Available Letters)
             </span>
             <span className="text-slate-400 text-[10px] font-bold">TAP LETTER TO PLACE</span>
           </div>
@@ -670,46 +719,7 @@ export const HiddenImageScreen: React.FC<HiddenImageScreenProps> = ({
         </div>
       )}
 
-      {/* Hint Alert Message */}
-      {hintMessage && (
-        <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs font-bold text-center animate-fade-in">
-          💡 {hintMessage}
-        </div>
-      )}
-
-      {/* SECTION 4: HINT & NAVIGATION ACTIONS */}
-      {!isCorrect && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          <button
-            onClick={handleHintRevealLetter}
-            className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 hover:border-amber-300 text-amber-700 dark:text-amber-300 font-extrabold text-xs flex flex-col items-center justify-center gap-1 transition-all shadow-xs"
-          >
-            <Lightbulb className="w-5 h-5 text-amber-500" />
-            <span>Reveal Letter</span>
-            <span className="text-[10px] text-amber-600 font-black">15 🪙</span>
-          </button>
-
-          <button
-            onClick={handleRandomQuestion}
-            className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 hover:border-indigo-300 text-slate-700 dark:text-slate-300 font-extrabold text-xs flex flex-col items-center justify-center gap-1 transition-all shadow-xs"
-          >
-            <Shuffle className="w-5 h-5 text-indigo-500" />
-            <span>Shuffle Picture</span>
-            <span className="text-[10px] text-slate-400 font-black">Free</span>
-          </button>
-
-          <button
-            onClick={handleNextQuestion}
-            className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 hover:border-slate-300 text-slate-500 font-extrabold text-xs flex flex-col items-center justify-center gap-1 transition-all shadow-xs col-span-2 sm:col-span-1"
-          >
-            <ArrowLeft className="w-5 h-5 text-slate-400 rotate-180" />
-            <span>Skip Picture</span>
-            <span className="text-[10px] text-slate-400 font-black">Free</span>
-          </button>
-        </div>
-      )}
-
-      {/* SECTION 5: CORRECT ANSWER CELEBRATION CARD */}
+      {/* CORRECT ANSWER CELEBRATION CARD */}
       {isCorrect && (
         <div className="p-6 sm:p-8 rounded-[36px] bg-emerald-50 dark:bg-emerald-950/60 border-2 border-emerald-300 dark:border-emerald-800 shadow-xl space-y-5 text-center animate-in zoom-in-95 duration-200">
           <div className="inline-flex p-4 rounded-full bg-emerald-500 text-white shadow-lg">

@@ -378,32 +378,32 @@ export const QuizPlayerScreen: React.FC<QuizPlayerScreenProps> = ({
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-4 space-y-5">
+    <div className="w-full max-w-4xl mx-auto px-4 py-4 space-y-5 box-border overflow-x-hidden">
       
       {/* Top Gameplay Bar */}
-      <div className="flex items-center justify-between gap-2 p-3.5 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl shadow-xs text-slate-800 dark:text-slate-100">
+      <div className="w-full flex items-center justify-between gap-3 p-3.5 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl shadow-xs text-slate-800 dark:text-slate-100 min-w-0 box-border overflow-hidden">
         <button
           id="quiz-back-btn"
           onClick={() => {
             soundFx.playClick();
             onBack();
           }}
-          className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-extrabold transition-colors"
+          className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-extrabold transition-colors shrink-0"
         >
           <ArrowLeft className="w-4 h-4" />
           <span className="hidden sm:inline">Packs</span>
         </button>
 
-        <div className="text-center">
-          <h2 className="font-black text-sm sm:text-base text-slate-900 dark:text-slate-100 truncate max-w-[200px] sm:max-w-xs uppercase tracking-tight">
+        <div className="text-center min-w-0 flex-1 px-2">
+          <h2 className="font-black text-sm sm:text-base text-slate-900 dark:text-slate-100 truncate uppercase tracking-tight">
             {pack.title}
           </h2>
-          <p className="text-xs text-indigo-600 dark:text-indigo-400 font-extrabold">
+          <p className="text-xs text-indigo-600 dark:text-indigo-400 font-extrabold truncate">
             Question {currentQuestionIndex + 1} of {questions.length}
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {/* Favourite Heart */}
           <button
             id="favourite-pack-btn"
@@ -426,12 +426,12 @@ export const QuizPlayerScreen: React.FC<QuizPlayerScreenProps> = ({
         </div>
       </div>
 
-      {/* Main Tablet Quiz View (Split or Stacked Grid) */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+      {/* Main Single Column Layout: Picture -> Clue -> Word -> Keyboard */}
+      <div className="w-full space-y-5">
         
-        {/* Left Column: Picture Card */}
-        <div className="md:col-span-5 flex flex-col items-center">
-          <div className="relative w-full aspect-square max-w-sm bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-[28px] overflow-hidden shadow-xs group">
+        {/* 1. PICTURE: QUIZ CLUE IMAGE */}
+        <div className="flex flex-col items-center bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-[32px] p-4 sm:p-6 shadow-md">
+          <div className="relative w-full aspect-square max-w-md mx-auto bg-slate-950 border-4 border-slate-200 dark:border-slate-800 rounded-[28px] overflow-hidden shadow-xl group select-none">
             <img
               src={currentQuestion.image}
               alt="Quiz clue picture"
@@ -460,156 +460,160 @@ export const QuizPlayerScreen: React.FC<QuizPlayerScreenProps> = ({
               </div>
             )}
           </div>
+        </div>
 
-          {/* Text Clue / Hint Bar */}
-          <div className="mt-3 w-full max-w-sm p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300 font-medium flex items-center gap-2">
+        {/* 2. CLUE: TEXT CLUE & HINT ACTIONS */}
+        {/* Text Clue / Hint Bar */}
+        {currentQuestion.hint && (
+          <div className="w-full p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300 font-medium flex items-center gap-2">
             <HelpCircle className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-            <span className="italic">{currentQuestion.hint}</span>
+            <span className="italic">Clue: {currentQuestion.hint}</span>
+          </div>
+        )}
+
+        {/* Hint Message Banner */}
+        {hintMessage && (
+          <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs font-bold text-center animate-fade-in">
+            💡 {hintMessage}
+          </div>
+        )}
+
+        {/* Hint Action Bar */}
+        {!isCorrect && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            <button
+              id="hint-reveal-letter-btn"
+              onClick={handleHintRevealLetter}
+              className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 hover:border-amber-300 text-amber-700 dark:text-amber-300 font-extrabold text-xs flex flex-col items-center justify-center gap-1 transition-all"
+            >
+              <Lightbulb className="w-4 h-4 text-amber-500" />
+              <span>Reveal Letter</span>
+              <span className="text-[10px] text-amber-600 font-bold">15 🪙</span>
+            </button>
+
+            <button
+              id="hint-remove-distractor-btn"
+              onClick={handleHintRemoveDistractors}
+              className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 hover:border-indigo-300 text-slate-700 dark:text-slate-300 font-extrabold text-xs flex flex-col items-center justify-center gap-1 transition-all"
+            >
+              <Eraser className="w-4 h-4 text-indigo-500" />
+              <span>Remove 4</span>
+              <span className="text-[10px] text-slate-400 font-bold">20 🪙</span>
+            </button>
+
+            <button
+              id="hint-solve-word-btn"
+              onClick={handleHintRevealWord}
+              className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 hover:border-indigo-300 text-indigo-700 dark:text-indigo-300 font-extrabold text-xs flex flex-col items-center justify-center gap-1 transition-all"
+            >
+              <Eye className="w-4 h-4 text-indigo-600" />
+              <span>Reveal Word</span>
+              <span className="text-[10px] text-indigo-600/80 font-bold">50 🪙</span>
+            </button>
+
+            <button
+              id="hint-skip-question-btn"
+              onClick={handleSkipQuestion}
+              className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 hover:border-slate-300 text-slate-500 font-extrabold text-xs flex flex-col items-center justify-center gap-1 transition-all"
+            >
+              <SkipForward className="w-4 h-4 text-slate-400" />
+              <span>Skip Pic</span>
+              <span className="text-[10px] text-slate-400 font-bold">30 🪙</span>
+            </button>
+          </div>
+        )}
+
+        {/* 3. WORD: ANSWER SLOTS */}
+        <div className="p-5 sm:p-6 rounded-[32px] bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 shadow-md space-y-3 text-center">
+          <span className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 block text-center">
+            Word Answer
+          </span>
+
+          {/* Word Slots Grid */}
+          <div className="flex flex-wrap items-center justify-center gap-2 min-h-[60px] py-1">
+            {targetAnswer.split('').map((char, index) => {
+              const isLetter = isAlpha(char);
+              const val = userGuess[index] || '';
+              const isRevealed = revealedIndices.includes(index);
+
+              if (!isLetter) {
+                // Space or punctuation divider
+                return (
+                  <div key={`space-${index}`} className="w-4 h-12 flex items-center justify-center text-slate-400 font-bold">
+                    {char === ' ' ? '' : char}
+                  </div>
+                );
+              }
+
+              return (
+                <button
+                  key={`slot-${index}`}
+                  onClick={() => handleClearSlot(index)}
+                  className={`w-11 h-13 sm:w-13 sm:h-15 rounded-2xl font-black text-xl sm:text-2xl flex items-center justify-center shadow-xs transition-all transform active:scale-95 ${
+                    isCorrect
+                      ? 'bg-emerald-500 text-white border-2 border-emerald-400 shadow-emerald-200'
+                      : isRevealed
+                      ? 'bg-amber-100 dark:bg-amber-950/60 border-2 border-amber-400 text-amber-700 dark:text-amber-300'
+                      : val
+                      ? 'bg-indigo-600 text-white border-2 border-indigo-500 shadow-indigo-200'
+                      : 'bg-slate-100 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-transparent'
+                  }`}
+                >
+                  {val}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* Right Column: Guess Slots, Letter Bank & Hints */}
-        <div className="md:col-span-7 space-y-6">
-          
-          {/* Answer Letter Boxes */}
-          <div className="p-6 rounded-[28px] bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 shadow-xs space-y-3">
-            <span className="text-xs font-black uppercase tracking-wider text-slate-400 block text-center">
-              TAP LETTERS OR USE KEYBOARD
-            </span>
+        {/* 4. KEYBOARD: AVAILABLE LETTERS (POSITIONED DIRECTLY BELOW WORD) */}
+        {!isCorrect && (
+          <div className="p-5 sm:p-6 rounded-[32px] bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 shadow-md space-y-3 text-center">
+            <div className="flex items-center justify-between text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 px-1">
+              <span className="text-indigo-600 dark:text-indigo-400 font-black flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-indigo-500" />
+                Keyboard (Available Letters)
+              </span>
+              <span className="text-slate-400 text-[10px] font-bold">TAP LETTER TO PLACE</span>
+            </div>
 
-            {/* Word Slots Grid */}
-            <div className="flex flex-wrap items-center justify-center gap-2 min-h-[60px] py-2">
-              {targetAnswer.split('').map((char, index) => {
-                const isLetter = isAlpha(char);
-                const val = userGuess[index] || '';
-                const isRevealed = revealedIndices.includes(index);
-
-                if (!isLetter) {
-                  // Space or punctuation divider
-                  return (
-                    <div key={`space-${index}`} className="w-4 h-12 flex items-center justify-center text-slate-400 font-bold">
-                      {char === ' ' ? '' : char}
-                    </div>
-                  );
-                }
-
-                return (
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              {letterBank
+                .filter(tile => !removedDistractors.includes(tile.id))
+                .map(tile => (
                   <button
-                    key={`slot-${index}`}
-                    onClick={() => handleClearSlot(index)}
-                    className={`w-11 h-13 sm:w-12 sm:h-14 rounded-2xl font-black text-xl sm:text-2xl flex items-center justify-center shadow-xs transition-all transform active:scale-95 ${
-                      isCorrect
-                        ? 'bg-emerald-500 text-white border-2 border-emerald-400 shadow-emerald-200'
-                        : isRevealed
-                        ? 'bg-amber-100 dark:bg-amber-950/60 border-2 border-amber-400 text-amber-700 dark:text-amber-300'
-                        : val
-                        ? 'bg-indigo-600 text-white border-2 border-indigo-500 shadow-indigo-200'
-                        : 'bg-slate-100 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-transparent'
+                    key={tile.id}
+                    disabled={tile.used}
+                    onClick={() => handleSelectBankTile(tile.id, tile.char)}
+                    className={`w-11 h-12 sm:w-13 sm:h-14 rounded-2xl font-black text-lg sm:text-2xl transition-all transform active:scale-90 ${
+                      tile.used
+                        ? 'opacity-20 scale-90 bg-slate-100 dark:bg-slate-800 text-slate-400 border border-slate-200 dark:border-slate-700 pointer-events-none'
+                        : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md hover:scale-105'
                     }`}
                   >
-                    {val}
+                    {tile.char}
                   </button>
-                );
-              })}
+                ))}
             </div>
           </div>
+        )}
 
-          {/* Letter Bank Tile Grid */}
-          {!isCorrect && (
-            <div className="p-6 rounded-[28px] bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 shadow-xs space-y-3">
-              <div className="flex items-center justify-between text-xs font-extrabold text-slate-500">
-                <span>AVAILABLE LETTERS</span>
-                <span className="text-slate-400 text-[10px]">TAP TO PLACE</span>
-              </div>
-
-              <div className="flex flex-wrap items-center justify-center gap-2">
-                {letterBank
-                  .filter(tile => !removedDistractors.includes(tile.id))
-                  .map(tile => (
-                    <button
-                      key={tile.id}
-                      disabled={tile.used}
-                      onClick={() => handleSelectBankTile(tile.id, tile.char)}
-                      className={`w-11 h-12 sm:w-12 sm:h-13 rounded-2xl font-black text-lg sm:text-xl transition-all transform active:scale-90 ${
-                        tile.used
-                          ? 'opacity-20 scale-90 bg-slate-100 dark:bg-slate-800 text-slate-400 border border-slate-200 dark:border-slate-700 pointer-events-none'
-                          : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs'
-                      }`}
-                    >
-                      {tile.char}
-                    </button>
-                  ))}
-              </div>
+        {/* Correct Answer Celebration & Trivia Card */}
+        {isCorrect && (
+          <div className="p-6 sm:p-8 rounded-[32px] bg-emerald-50 dark:bg-emerald-950/60 border-2 border-emerald-300 dark:border-emerald-800 shadow-xs space-y-4 text-center">
+            <div className="inline-flex p-3.5 rounded-full bg-emerald-500 text-white shadow-md">
+              <CheckCircle2 className="w-8 h-8" />
             </div>
-          )}
 
-          {/* Hint Message Banner */}
-          {hintMessage && (
-            <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs font-bold text-center animate-fade-in">
-              💡 {hintMessage}
+            <div>
+              <h3 className="font-black text-2xl text-emerald-900 dark:text-emerald-100 tracking-tight uppercase">CORRECT ANSWER!</h3>
+              <p className="font-black text-emerald-700 dark:text-emerald-300 text-xl tracking-wider mt-1">
+                {currentQuestion.correctAnswer}
+              </p>
             </div>
-          )}
 
-          {/* Hint Action Bar */}
-          {!isCorrect && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-              <button
-                id="hint-reveal-letter-btn"
-                onClick={handleHintRevealLetter}
-                className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 hover:border-amber-300 text-amber-700 dark:text-amber-300 font-extrabold text-xs flex flex-col items-center justify-center gap-1 transition-all"
-              >
-                <Lightbulb className="w-4 h-4 text-amber-500" />
-                <span>Reveal Letter</span>
-                <span className="text-[10px] text-amber-600 font-bold">15 🪙</span>
-              </button>
-
-              <button
-                id="hint-remove-distractor-btn"
-                onClick={handleHintRemoveDistractors}
-                className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 hover:border-indigo-300 text-slate-700 dark:text-slate-300 font-extrabold text-xs flex flex-col items-center justify-center gap-1 transition-all"
-              >
-                <Eraser className="w-4 h-4 text-indigo-500" />
-                <span>Remove 4</span>
-                <span className="text-[10px] text-slate-400 font-bold">20 🪙</span>
-              </button>
-
-              <button
-                id="hint-solve-word-btn"
-                onClick={handleHintRevealWord}
-                className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 hover:border-indigo-300 text-indigo-700 dark:text-indigo-300 font-extrabold text-xs flex flex-col items-center justify-center gap-1 transition-all"
-              >
-                <Eye className="w-4 h-4 text-indigo-600" />
-                <span>Reveal Word</span>
-                <span className="text-[10px] text-indigo-600/80 font-bold">50 🪙</span>
-              </button>
-
-              <button
-                id="hint-skip-question-btn"
-                onClick={handleSkipQuestion}
-                className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 hover:border-slate-300 text-slate-500 font-extrabold text-xs flex flex-col items-center justify-center gap-1 transition-all"
-              >
-                <SkipForward className="w-4 h-4 text-slate-400" />
-                <span>Skip Pic</span>
-                <span className="text-[10px] text-slate-400 font-bold">30 🪙</span>
-              </button>
-            </div>
-          )}
-
-          {/* Correct Answer Celebration & Trivia Card */}
-          {isCorrect && (
-            <div className="p-6 sm:p-8 rounded-[32px] bg-emerald-50 dark:bg-emerald-950/60 border-2 border-emerald-300 dark:border-emerald-800 shadow-xs space-y-4 text-center">
-              <div className="inline-flex p-3.5 rounded-full bg-emerald-500 text-white shadow-md">
-                <CheckCircle2 className="w-8 h-8" />
-              </div>
-
-              <div>
-                <h3 className="font-black text-2xl text-emerald-900 dark:text-emerald-100 tracking-tight uppercase">CORRECT ANSWER!</h3>
-                <p className="font-black text-emerald-700 dark:text-emerald-300 text-xl tracking-wider mt-1">
-                  {currentQuestion.correctAnswer}
-                </p>
-              </div>
-
-              {/* Trivia Fact */}
+            {/* Trivia Fact */}
+            {currentQuestion.triviaFact && (
               <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-800 text-left text-slate-700 dark:text-slate-200 text-sm space-y-1">
                 <div className="flex items-center gap-2 font-black text-emerald-600 dark:text-emerald-400 text-xs uppercase tracking-wider">
                   <Sparkles className="w-4 h-4" />
@@ -619,22 +623,22 @@ export const QuizPlayerScreen: React.FC<QuizPlayerScreenProps> = ({
                   {currentQuestion.triviaFact}
                 </p>
               </div>
+            )}
 
-              {/* Next Question Button */}
-              <button
-                id="next-question-btn"
-                onClick={() => {
-                  soundFx.playClick();
-                  handleNextQuestion();
-                }}
-                className="w-full py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-base shadow-lg shadow-indigo-200 dark:shadow-none transition-all transform active:scale-98"
-              >
-                {currentQuestionIndex + 1 < questions.length ? 'NEXT QUESTION →' : 'FINISH PACK 🎉'}
-              </button>
-            </div>
-          )}
+            {/* Next Question Button */}
+            <button
+              id="next-question-btn"
+              onClick={() => {
+                soundFx.playClick();
+                handleNextQuestion();
+              }}
+              className="w-full py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-base shadow-lg shadow-indigo-200 dark:shadow-none transition-all transform active:scale-98"
+            >
+              {currentQuestionIndex + 1 < questions.length ? 'NEXT QUESTION →' : 'FINISH PACK 🎉'}
+            </button>
+          </div>
+        )}
 
-        </div>
       </div>
 
       {/* Image Zoom Modal */}

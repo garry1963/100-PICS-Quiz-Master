@@ -127,9 +127,6 @@ export const PackDetailsModal: React.FC<PackDetailsModalProps> = ({
 
           {/* Badges */}
           <div className="absolute top-4 left-4 flex flex-wrap items-center gap-2">
-            <span className="px-3 py-1 rounded-full bg-indigo-600/90 text-white font-extrabold text-xs shadow-md backdrop-blur-md">
-              {pack.category}
-            </span>
             <span className="px-3 py-1 rounded-full bg-amber-500/90 text-slate-950 font-black text-xs shadow-md backdrop-blur-md">
               {pack.difficulty}
             </span>
