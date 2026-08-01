@@ -72,6 +72,16 @@ export function App() {
   }, []);
 
   const [authNoticeMessage, setAuthNoticeMessage] = useState<string | null>(null);
+  const [tabletViewMode, setTabletViewMode] = useState<'portrait' | 'landscape' | 'fluid'>(() => {
+    const saved = localStorage.getItem('100pics_tablet_orientation_mode');
+    return (saved as 'portrait' | 'landscape' | 'fluid') || 'portrait';
+  });
+
+  const handleSetTabletViewMode = (mode: 'portrait' | 'landscape' | 'fluid') => {
+    setTabletViewMode(mode);
+    localStorage.setItem('100pics_tablet_orientation_mode', mode);
+  };
+
   const [pendingGameAction, setPendingGameAction] = useState<
     | { type: 'play_pack'; packId: string }
     | { type: 'navigate_tab'; tab: string }
@@ -213,39 +223,50 @@ export function App() {
   };
 
   return (
-    <div className={`min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans transition-colors duration-300 ${
-      settings.theme === 'light' ? 'bg-slate-100 text-slate-900' : ''
+    <div className={`min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-start font-sans transition-colors duration-300 overflow-x-hidden ${
+      settings.theme === 'light' ? 'bg-slate-200 text-slate-900' : ''
     }`}>
       
-      {/* Top Navbar */}
-      <Navbar
-        user={user}
-        settings={settings}
-        onUpdateSettings={handleUpdateSettings}
-        onOpenDrawer={() => setIsDrawerOpen(true)}
-        onOpenAdmin={() => setActiveTab('admin')}
-        onOpenProfile={() => setActiveTab('stats')}
-        onOpenSearch={() => setIsSearchOpen(true)}
-        onNavigateHome={() => setActiveTab('home')}
-      />
+      {/* Tablet Screen Shell Container: Locks Navbar & Screen Width to Portrait (768px), Landscape (1024px) or Fluid */}
+      <div className={`w-full min-h-screen flex flex-col transition-all duration-300 bg-white dark:bg-slate-900 shadow-2xl overflow-x-hidden ${
+        tabletViewMode === 'portrait'
+          ? 'max-w-[768px] border-x border-slate-300 dark:border-slate-800'
+          : tabletViewMode === 'landscape'
+          ? 'max-w-[1024px] border-x border-slate-300 dark:border-slate-800'
+          : 'max-w-7xl'
+      }`}>
 
-      {/* Side Navigation Drawer */}
-      <NavigationDrawer
-        isOpen={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
-        user={user}
-        activeTab={activeTab}
-        onSelectTab={(tab) => handleNavigateTab(tab)}
-        onSwitchAccount={() => {
-          handleSignOutAll();
-        }}
-        onLogout={() => {
-          handleSignOutAll();
-        }}
-      />
+        {/* Top Navbar */}
+        <Navbar
+          user={user}
+          settings={settings}
+          onUpdateSettings={handleUpdateSettings}
+          onOpenDrawer={() => setIsDrawerOpen(true)}
+          onOpenAdmin={() => setActiveTab('admin')}
+          onOpenProfile={() => setActiveTab('stats')}
+          onOpenSearch={() => setIsSearchOpen(true)}
+          onNavigateHome={() => setActiveTab('home')}
+          tabletViewMode={tabletViewMode}
+          onToggleTabletMode={handleSetTabletViewMode}
+        />
 
-      {/* Main Content Body */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Side Navigation Drawer */}
+        <NavigationDrawer
+          isOpen={isDrawerOpen}
+          onClose={() => setIsDrawerOpen(false)}
+          user={user}
+          activeTab={activeTab}
+          onSelectTab={(tab) => handleNavigateTab(tab)}
+          onSwitchAccount={() => {
+            handleSignOutAll();
+          }}
+          onLogout={() => {
+            handleSignOutAll();
+          }}
+        />
+
+        {/* Main Content Body */}
+        <main className="flex-1 w-full mx-auto px-3 sm:px-6 py-4 sm:py-6 overflow-x-hidden box-border">
         {activeTab === 'home' && (
           <HomeScreen
             packs={packs}
@@ -431,6 +452,7 @@ export function App() {
           )
         )}
       </main>
+      </div>
 
       {/* Pack Details Modal */}
       {selectedPackDetails && (

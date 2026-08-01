@@ -127,31 +127,25 @@ class LocalStorageEngine {
   }
 
   public purgeSampleData() {
-    const legacySampleCategoryIds = ['cat-logos', 'cat-flags', 'cat-movies', 'cat-landmarks', 'cat-games', 'cat-food', 'cat-music'];
-    const legacySamplePackIds = ['pack-famous-logos', 'pack-world-flags', 'pack-movie-icons', 'pack-world-landmarks', 'pack-retro-games', 'pack-food-delights', 'pack-music-icons'];
+    const legacySampleCategoryIds = ['cat-logos', 'cat-flags', 'cat-movies', 'cat-landmarks', 'cat-games', 'cat-food', 'cat-music', 'cat-animals'];
+    const legacySamplePackIds = ['pack-famous-logos', 'pack-world-flags', 'pack-movie-icons', 'pack-world-landmarks', 'pack-retro-games', 'pack-food-delights', 'pack-music-icons', 'pack-world-animals', 'pack-wild-animals'];
 
     const cleanCategories = this.getCategories().filter(c => !legacySampleCategoryIds.includes(c.id));
-    if (cleanCategories.length === 0) {
-      cleanCategories.push(INITIAL_CATEGORIES[0]);
-    }
     this.setItem(KEYS.CATEGORIES, cleanCategories);
 
     const cleanPacks = this.getPacks().filter(p => !legacySamplePackIds.includes(p.id));
-    if (cleanPacks.length === 0) {
-      cleanPacks.push(INITIAL_PACKS[0]);
-    }
     this.setItem(KEYS.PACKS, cleanPacks);
 
     const cleanQuestions = this.getQuestions().filter(q => 
       !legacySamplePackIds.includes(q.packId) && 
+      !q.packId.includes('world-animals') &&
+      !q.packId.includes('wild-animals') &&
+      !q.id.startsWith('q-world-animal') &&
       !q.id.startsWith('q-logo-') && !q.id.startsWith('q-flag-') &&
       !q.id.startsWith('q-movie-') &&
       !q.id.startsWith('q-landmark-') && !q.id.startsWith('q-game-') &&
       !q.id.startsWith('q-food-') && !q.id.startsWith('q-music-')
     );
-    if (cleanQuestions.length === 0) {
-      cleanQuestions.push(...INITIAL_QUESTIONS);
-    }
     this.setItem(KEYS.QUESTIONS, cleanQuestions);
 
     const cleanUsers = this.getAllUsers().filter(
@@ -655,9 +649,7 @@ class LocalStorageEngine {
   }
 
   public getDownloadedPackIds(): string[] {
-    const rawDownloads = this.getItem<string[]>(KEYS.OFFLINE_DOWNLOADS, [
-      'pack-world-animals'
-    ]);
+    const rawDownloads = this.getItem<string[]>(KEYS.OFFLINE_DOWNLOADS, []);
     const downloadsSet = new Set(rawDownloads);
 
     // Automatically count packs as downloaded if they have local questions stored
@@ -778,8 +770,7 @@ class LocalStorageEngine {
     const allPacks = this.getPacks();
     const allProgress = this.getAllProgress();
 
-    // Starter pack World Animals is protected from deletion
-    const protectedIds = ['pack-world-animals', 'pack-wild-animals'];
+    const protectedIds: string[] = [];
 
     // Identify completed downloaded packs (100% finished)
     const completedDownloadedPackIds = downloadedIds.filter(id => {
@@ -863,7 +854,7 @@ class LocalStorageEngine {
       downloadedCount: downloadedIds.length,
       completedCount,
       downloadedIds,
-      starterPackAvailable: downloadedIds.includes('pack-world-animals') || downloadedIds.includes('pack-wild-animals')
+      starterPackAvailable: false
     };
   }
 

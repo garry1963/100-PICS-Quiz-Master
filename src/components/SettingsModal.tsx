@@ -105,7 +105,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 Hybrid Cloud & Local Device Storage
               </h4>
               <p className="text-xs text-indigo-900/80 dark:text-indigo-300/80 font-medium leading-relaxed">
-                Ships with basic starter pack <strong className="font-bold">World Animals</strong> locally. New puzzle packs are fetched on-demand from the cloud and cached for offline play.
+                Quiz puzzle packs are fetched on-demand from the cloud and cached locally for seamless offline play.
               </p>
             </div>
             <span className="px-3 py-1 rounded-full bg-indigo-600 text-white font-extrabold text-[10px] tracking-wide whitespace-nowrap shadow-xs">

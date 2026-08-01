@@ -42,8 +42,6 @@ export const PackDetailsModal: React.FC<PackDetailsModalProps> = ({
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
-  const isStarterPack = pack.id === 'pack-world-animals' || pack.id === 'pack-wild-animals';
-
   const handleDownloadCloud = async () => {
     soundFx.playClick();
     setDownloading(true);
@@ -131,12 +129,7 @@ export const PackDetailsModal: React.FC<PackDetailsModalProps> = ({
               {pack.difficulty}
             </span>
 
-            {isStarterPack ? (
-              <span className="px-3 py-1 rounded-full bg-emerald-500 text-slate-950 font-black text-xs flex items-center gap-1 shadow-md backdrop-blur-md">
-                <ShieldCheck className="w-3.5 h-3.5" />
-                Basic Starter Pack (Local)
-              </span>
-            ) : isDownloaded ? (
+            {isDownloaded ? (
               <span className="px-3 py-1 rounded-full bg-emerald-500/90 text-slate-950 font-extrabold text-xs flex items-center gap-1 shadow-md backdrop-blur-md">
                 <WifiOff className="w-3.5 h-3.5" />
                 Cloud Cached (Offline Ready)
@@ -144,7 +137,7 @@ export const PackDetailsModal: React.FC<PackDetailsModalProps> = ({
             ) : (
               <span className="px-3 py-1 rounded-full bg-indigo-500/90 text-white font-extrabold text-xs flex items-center gap-1 shadow-md backdrop-blur-md">
                 <CloudDownload className="w-3.5 h-3.5" />
-                On-Demand Cloud Pack
+                Cloud Pack
               </span>
             )}
           </div>
@@ -232,7 +225,7 @@ export const PackDetailsModal: React.FC<PackDetailsModalProps> = ({
             ) : (
               <div className="w-full sm:w-auto px-4 py-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 font-bold text-xs flex items-center justify-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                <span>{isStarterPack ? 'Starter Pack Ready' : 'Cached for Offline Play'}</span>
+                <span>Cached for Offline Play</span>
               </div>
             )}
 
