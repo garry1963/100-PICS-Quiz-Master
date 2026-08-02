@@ -463,6 +463,7 @@ export function App() {
           onClose={() => setSelectedPackDetails(null)}
           onPlayPack={handlePlayPackDirect}
           onDownloadPack={handleDownloadPack}
+          onPackUpdated={refreshAllData}
         />
       )}
 

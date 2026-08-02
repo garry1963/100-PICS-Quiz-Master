@@ -221,8 +221,8 @@ export const QuizPackEditor: React.FC<QuizPackEditorProps> = ({ onManageQuestion
                 }}
               />
               <div className="flex-1 min-w-0">
-                <span className="text-[10px] uppercase font-bold text-indigo-400">{p.category}</span>
                 <h4 className="font-bold text-sm text-slate-100 truncate">{p.title}</h4>
+                <span className="text-[10px] uppercase font-bold text-indigo-400">Category: {p.category}</span>
                 <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-400">
                   <span className="text-amber-400 font-bold">{p.difficulty}</span>
                   <span>• {p.totalQuestions} Pics</span>

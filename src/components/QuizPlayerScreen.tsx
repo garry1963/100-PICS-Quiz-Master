@@ -56,6 +56,49 @@ export const QuizPlayerScreen: React.FC<QuizPlayerScreenProps> = ({
   const targetAnswer = currentQuestion ? currentQuestion.correctAnswer.toUpperCase() : '';
   const isAlpha = (ch: string) => /[A-Z]/.test(ch);
 
+  // Group targetAnswer into words to ensure complete words wrap onto new lines
+  const wordGroups = useMemo(() => {
+    if (!targetAnswer) return [];
+
+    const groups: Array<{
+      id: string;
+      isSpace: boolean;
+      items: Array<{ char: string; index: number }>;
+    }> = [];
+
+    let currentWord: Array<{ char: string; index: number }> = [];
+
+    targetAnswer.split('').forEach((char, index) => {
+      if (char === ' ') {
+        if (currentWord.length > 0) {
+          groups.push({
+            id: `word-${groups.length}-${index}`,
+            isSpace: false,
+            items: currentWord,
+          });
+          currentWord = [];
+        }
+        groups.push({
+          id: `space-${index}`,
+          isSpace: true,
+          items: [{ char: ' ', index }],
+        });
+      } else {
+        currentWord.push({ char, index });
+      }
+    });
+
+    if (currentWord.length > 0) {
+      groups.push({
+        id: `word-${groups.length}-${targetAnswer.length}`,
+        isSpace: false,
+        items: currentWord,
+      });
+    }
+
+    return groups;
+  }, [targetAnswer]);
+
   // Initialize Favourite status
   useEffect(() => {
     setIsFavourite(dbStore.getFavouritePackIds().includes(pack.id));
@@ -530,37 +573,49 @@ export const QuizPlayerScreen: React.FC<QuizPlayerScreenProps> = ({
           </span>
 
           {/* Word Slots Grid */}
-          <div className="flex flex-wrap items-center justify-center gap-2 min-h-[60px] py-1">
-            {targetAnswer.split('').map((char, index) => {
-              const isLetter = isAlpha(char);
-              const val = userGuess[index] || '';
-              const isRevealed = revealedIndices.includes(index);
-
-              if (!isLetter) {
-                // Space or punctuation divider
+          <div className="flex flex-wrap items-center justify-center gap-y-3 min-h-[60px] py-1 max-w-full">
+            {wordGroups.map((group) => {
+              if (group.isSpace) {
                 return (
-                  <div key={`space-${index}`} className="w-4 h-12 flex items-center justify-center text-slate-400 font-bold">
-                    {char === ' ' ? '' : char}
-                  </div>
+                  <div key={group.id} className="w-2 sm:w-3 h-12 flex items-center justify-center shrink-0" />
                 );
               }
 
               return (
-                <button
-                  key={`slot-${index}`}
-                  onClick={() => handleClearSlot(index)}
-                  className={`w-11 h-13 sm:w-13 sm:h-15 rounded-2xl font-black text-xl sm:text-2xl flex items-center justify-center shadow-xs transition-all transform active:scale-95 ${
-                    isCorrect
-                      ? 'bg-emerald-500 text-white border-2 border-emerald-400 shadow-emerald-200'
-                      : isRevealed
-                      ? 'bg-amber-100 dark:bg-amber-950/60 border-2 border-amber-400 text-amber-700 dark:text-amber-300'
-                      : val
-                      ? 'bg-indigo-600 text-white border-2 border-indigo-500 shadow-indigo-200'
-                      : 'bg-slate-100 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-transparent'
-                  }`}
-                >
-                  {val}
-                </button>
+                <div key={group.id} className="flex flex-nowrap items-center justify-center gap-1.5 sm:gap-2 shrink-0 max-w-full">
+                  {group.items.map(({ char, index }) => {
+                    const isLetter = isAlpha(char);
+                    const val = userGuess[index] || '';
+                    const isRevealed = revealedIndices.includes(index);
+
+                    if (!isLetter) {
+                      // Punctuation divider
+                      return (
+                        <div key={`punc-${index}`} className="w-4 h-12 flex items-center justify-center text-slate-400 font-bold">
+                          {char}
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <button
+                        key={`slot-${index}`}
+                        onClick={() => handleClearSlot(index)}
+                        className={`w-10 h-12 sm:w-13 sm:h-15 rounded-2xl font-black text-lg sm:text-2xl flex items-center justify-center shadow-xs transition-all transform active:scale-95 ${
+                          isCorrect
+                            ? 'bg-emerald-500 text-white border-2 border-emerald-400 shadow-emerald-200'
+                            : isRevealed
+                            ? 'bg-amber-100 dark:bg-amber-950/60 border-2 border-amber-400 text-amber-700 dark:text-amber-300'
+                            : val
+                            ? 'bg-indigo-600 text-white border-2 border-indigo-500 shadow-indigo-200'
+                            : 'bg-slate-50 dark:bg-slate-800/90 border-2 border-indigo-400 dark:border-indigo-500 shadow-xs text-slate-800 dark:text-slate-100 hover:border-indigo-500'
+                        }`}
+                      >
+                        {val}
+                      </button>
+                    );
+                  })}
+                </div>
               );
             })}
           </div>

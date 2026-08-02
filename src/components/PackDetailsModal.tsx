@@ -13,7 +13,10 @@ import {
   Tag,
   WifiOff,
   CloudDownload,
-  ShieldCheck
+  ShieldCheck,
+  FolderPlus,
+  Folder,
+  Plus
 } from 'lucide-react';
 import { QuizPack, PlayerPackProgress } from '../types';
 import { dbStore } from '../lib/storage';
@@ -26,6 +29,7 @@ interface PackDetailsModalProps {
   onClose: () => void;
   onPlayPack: (packId: string) => void;
   onDownloadPack: (packId: string) => void;
+  onPackUpdated?: () => void;
 }
 
 export const PackDetailsModal: React.FC<PackDetailsModalProps> = ({
@@ -35,12 +39,47 @@ export const PackDetailsModal: React.FC<PackDetailsModalProps> = ({
   onClose,
   onPlayPack,
   onDownloadPack,
+  onPackUpdated,
 }) => {
   if (!pack) return null;
 
   const [downloading, setDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+
+  const [availableCategories, setAvailableCategories] = useState(() => dbStore.getCategories());
+  const [currentCategory, setCurrentCategory] = useState(pack.category);
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+  const [newCategoryInput, setNewCategoryInput] = useState('');
+
+  const handleAssignCategory = (categoryName: string) => {
+    if (!categoryName.trim()) return;
+    soundFx.playClick();
+    const updatedPack = { ...pack, category: categoryName.trim() };
+    dbStore.savePack(updatedPack);
+
+    // Ensure category exists in dbStore
+    const existingCat = dbStore.getCategories().find(c => c.name.toLowerCase() === categoryName.trim().toLowerCase());
+    if (!existingCat) {
+      dbStore.saveCategory({
+        id: `cat-${Date.now()}`,
+        name: categoryName.trim(),
+        slug: categoryName.trim().toLowerCase().replace(/\s+/g, '-'),
+        description: `Quiz packs for ${categoryName.trim()}`,
+        icon: '📁',
+        color: 'from-indigo-500 to-purple-600',
+        packCount: 1,
+        questionCount: pack.totalQuestions
+      });
+      setAvailableCategories(dbStore.getCategories());
+    }
+
+    setCurrentCategory(categoryName.trim());
+    setStatusMessage(`Assigned to category "${categoryName.trim()}"`);
+    setIsCreatingCategory(false);
+    setNewCategoryInput('');
+    if (onPackUpdated) onPackUpdated();
+  };
 
   const handleDownloadCloud = async () => {
     soundFx.playClick();
@@ -186,6 +225,69 @@ export const PackDetailsModal: React.FC<PackDetailsModalProps> = ({
                 +{pack.xpReward} XP
               </span>
             </div>
+          </div>
+
+          {/* Category Assignment Option */}
+          <div className="p-4 rounded-2xl bg-indigo-50/80 dark:bg-indigo-950/50 border-2 border-indigo-200/80 dark:border-indigo-800/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-indigo-100 dark:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400">
+                <FolderPlus className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-xs font-black text-indigo-950 dark:text-indigo-200 block">Category Assignment</span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 font-bold">Assign selected quiz pack to a category</span>
+              </div>
+            </div>
+
+            {isCreatingCategory ? (
+              <div className="flex items-center gap-1.5 w-full sm:w-auto">
+                <input
+                  type="text"
+                  placeholder="New category name..."
+                  value={newCategoryInput}
+                  onChange={e => setNewCategoryInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleAssignCategory(newCategoryInput); }}
+                  className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-indigo-300 dark:border-indigo-700 text-xs font-bold text-slate-800 dark:text-slate-100 focus:outline-none"
+                  autoFocus
+                />
+                <button
+                  onClick={() => handleAssignCategory(newCategoryInput)}
+                  className="px-3 py-1.5 rounded-xl bg-indigo-600 text-white font-bold text-xs"
+                >
+                  Save
+                </button>
+                <button
+                  onClick={() => setIsCreatingCategory(false)}
+                  className="p-1.5 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <select
+                  value={currentCategory}
+                  onChange={(e) => {
+                    if (e.target.value === '__NEW__') {
+                      setIsCreatingCategory(true);
+                    } else {
+                      handleAssignCategory(e.target.value);
+                    }
+                  }}
+                  className="w-full sm:w-auto px-3.5 py-2 rounded-xl bg-white dark:bg-slate-800 border-2 border-indigo-200 dark:border-indigo-800 text-xs font-black text-slate-800 dark:text-slate-100 focus:outline-none focus:border-indigo-500 cursor-pointer shadow-xs"
+                >
+                  {availableCategories.map(cat => (
+                    <option key={cat.id} value={cat.name}>
+                      📁 {cat.name}
+                    </option>
+                  ))}
+                  {!availableCategories.some(c => c.name === currentCategory) && (
+                    <option value={currentCategory}>📁 {currentCategory}</option>
+                  )}
+                  <option value="__NEW__">+ Create New Category...</option>
+                </select>
+              </div>
+            )}
           </div>
 
           {/* Progress Bar Section */}
